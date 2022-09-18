@@ -154,7 +154,6 @@ void PlayMode::update(float elapsed) {
 
 	//move camera:
 	{
-
 		//combine inputs into a move:
 		constexpr float PlayerSpeed = 30.0f;
 		glm::vec2 move = glm::vec2(0.0f);
@@ -221,14 +220,14 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			0.0f, 0.0f, 0.0f, 1.0f
 		));
 
-		constexpr float H = 0.09f; // Specifies text height??
+		constexpr float H = 0.08f; // Specifies text height??
 		lines.draw_text(messages[cur_message_ind],
-			glm::vec3(-aspect + message_x * H, -1.0 + 0.15f * H, 0.0),
+			glm::vec3(-aspect + message_x * H, -1.0 + 0.45f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		float ofs = 2.0f / drawable_size.y;
 		lines.draw_text(messages[cur_message_ind],
-			glm::vec3(-aspect + message_x * H + ofs, -1.0 + + 0.15f * H + ofs, 0.0),
+			glm::vec3(-aspect + message_x * H + ofs, -1.0 + 0.45f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00),
 			message_anchor_out);
@@ -241,7 +240,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			cur_message_ind = (cur_message_ind + 1) % messages.size();
 			// Draw next message to determine its length via anchor out
 			lines.draw_text(messages[cur_message_ind],
-				glm::vec3(-aspect + message_x * H + ofs, -1.0 + +0.15f * H + ofs, 0.0),
+				glm::vec3(-aspect + message_x * H + ofs, -1.0 + 0.45f * H + ofs, 0.0),
 				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 				glm::u8vec4(0xff, 0xff, 0xff, 0x00),
 				message_anchor_out);
@@ -249,7 +248,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			message_x = -((message_anchor_out->x - ((message_x * H) - aspect)) / H);
 		}
 		
-
 		// Draw grid
 		DrawLines grid(glm::mat4(
 			1.0f, 0.0f, 0.0f, 0.0f,
@@ -267,7 +265,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		grid.draw(glm::vec3(-2, -0.997f, 0), glm::vec3(2, -0.997f, 0));
 		grid.draw(glm::vec3(-0.998f, 2, 0), glm::vec3(-0.998f, -2, 0));
 		grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0));
-
 	}
 	GL_ERRORS();
 }
