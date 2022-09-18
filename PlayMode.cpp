@@ -129,6 +129,9 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 void PlayMode::update(float elapsed) {
 
+	// Update scrolling text position
+	message_x += 0.005f;
+
 	//slowly rotates through [0,1):
 	wobble += elapsed / 10.0f;
 	wobble -= std::floor(wobble);
@@ -206,9 +209,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	scene.draw(*camera);
 
-	{ //use DrawLines to overlay some text:
+	{
 		glDisable(GL_DEPTH_TEST);
 		float aspect = float(drawable_size.x) / float(drawable_size.y);
+
+		//Scrolling Text
 		DrawLines lines(glm::mat4(
 			1.0f / aspect, 0.0f, 0.0f, 0.0f,
 			0.0f, 1.0f, 0.0f, 0.0f,
@@ -216,16 +221,53 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			0.0f, 0.0f, 0.0f, 1.0f
 		));
 
-		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
+		constexpr float H = 0.09f; // Specifies text height??
+		lines.draw_text(messages[cur_message_ind],
+			glm::vec3(-aspect + message_x * H, -1.0 + 0.15f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
+		lines.draw_text(messages[cur_message_ind],
+			glm::vec3(-aspect + message_x * H + ofs, -1.0 + + 0.15f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+			glm::u8vec4(0xff, 0xff, 0xff, 0x00),
+			message_anchor_out);
+
+		// FYI, How to check to see if rightmost edge of text is at the right side of the screen: st_anchor_out->x > aspect
+		//std::cout << "message_x * H - apect: " << message_x * H - aspect << "\n" << "anchor out x: " << message_anchor_out->x << std::endl;
+		// Check to see if anchor has scrolled off the right side of the screen
+		if ((message_x * H) - aspect > aspect) {
+			// Set next message, loop back to beginning if neccesary
+			cur_message_ind = (cur_message_ind + 1) % messages.size();
+			// Draw next message to determine its length via anchor out
+			lines.draw_text(messages[cur_message_ind],
+				glm::vec3(-aspect + message_x * H + ofs, -1.0 + +0.15f * H + ofs, 0.0),
+				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+				glm::u8vec4(0xff, 0xff, 0xff, 0x00),
+				message_anchor_out);
+			// Set text so that right edge of new rightmost character is just off the left side of the screen
+			message_x = -((message_anchor_out->x - ((message_x * H) - aspect)) / H);
+		}
+		
+
+		// Draw grid
+		DrawLines grid(glm::mat4(
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		));
+		// Grid
+		grid.draw(glm::vec3(-2, 0.07f, 0), glm::vec3(2, 0.07f, 0));
+		grid.draw(glm::vec3(-0.33f, 2, 0), glm::vec3(-0.33f, -0.85f, 0));
+		grid.draw(glm::vec3(0.33f, 2, 0), glm::vec3(0.33f, -0.85f, 0));
+		grid.draw(glm::vec3(-2, -0.85f, 0), glm::vec3(2, -0.85f, 0));
+		// Frame
+		grid.draw(glm::vec3(-2, 0.997f, 0), glm::vec3(2, 0.997f, 0));
+		grid.draw(glm::vec3(-2, -0.997f, 0), glm::vec3(2, -0.997f, 0));
+		grid.draw(glm::vec3(-0.998f, 2, 0), glm::vec3(-0.998f, -2, 0));
+		grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0));
+
 	}
 	GL_ERRORS();
 }
