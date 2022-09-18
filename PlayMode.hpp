@@ -46,7 +46,7 @@ struct PlayMode : Mode {
 	Scene::Camera *camera = nullptr;
 
 	// Scrolling text
-	float message_x = 0.1f;
+	float message_offset = 0.1f;
 	glm::vec3 * message_anchor_out = new glm::vec3();
 	uint8_t cur_message_ind = 0;
 	std::vector<std::string> messages = {"First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message"};

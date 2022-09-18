@@ -130,7 +130,7 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 void PlayMode::update(float elapsed) {
 
 	// Update scrolling text position
-	message_x += 0.005f;
+	message_offset += 0.005f;
 
 	//slowly rotates through [0,1):
 	wobble += elapsed / 10.0f;
@@ -222,12 +222,12 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 		constexpr float H = 0.08f; // Specifies text height??
 		lines.draw_text(messages[cur_message_ind],
-			glm::vec3(-aspect + message_x * H, -1.0 + 0.45f * H, 0.0),
+			glm::vec3(aspect - message_offset * H, -1.0 + 0.45f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		float ofs = 2.0f / drawable_size.y;
 		lines.draw_text(messages[cur_message_ind],
-			glm::vec3(-aspect + message_x * H + ofs, -1.0 + 0.45f * H + ofs, 0.0),
+			glm::vec3(aspect - message_offset * H + ofs, -1.0 + 0.45f * H + ofs, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00),
 			message_anchor_out);
@@ -235,17 +235,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		// FYI, How to check to see if rightmost edge of text is at the right side of the screen: st_anchor_out->x > aspect
 		//std::cout << "message_x * H - apect: " << message_x * H - aspect << "\n" << "anchor out x: " << message_anchor_out->x << std::endl;
 		// Check to see if anchor has scrolled off the right side of the screen
-		if ((message_x * H) - aspect > aspect) {
+		if (message_anchor_out->x < -aspect) {
 			// Set next message, loop back to beginning if neccesary
 			cur_message_ind = (cur_message_ind + 1) % messages.size();
-			// Draw next message to determine its length via anchor out
-			lines.draw_text(messages[cur_message_ind],
-				glm::vec3(-aspect + message_x * H + ofs, -1.0 + 0.45f * H + ofs, 0.0),
-				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-				glm::u8vec4(0xff, 0xff, 0xff, 0x00),
-				message_anchor_out);
 			// Set text so that right edge of new rightmost character is just off the left side of the screen
-			message_x = -((message_anchor_out->x - ((message_x * H) - aspect)) / H);
+			message_offset = 0;
 		}
 		
 		// Draw grid
