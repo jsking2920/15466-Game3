@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# Dance or Die!
 
-Author: (TODO: your name)
+Author: Scott King
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: Dance or Die is a combination of rhythm, idle, and survival games inspired by Crypt of the Necrodancer, Trimps, and Don't Starve. 
 
 Screen Shot:
 
@@ -11,8 +11,6 @@ Screen Shot:
 How To Play:
 
 (TODO: describe the controls and (if needed) goals/strategy.)
-
-Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
 
 This game was built with [NEST](NEST.md).
 
