@@ -138,9 +138,6 @@ void PlayMode::update(float elapsed) {
 
 	// Update beat detection timer
 	timer -= elapsed;
-	if (timer >= -elapsed && timer <= elapsed) {
-		//std::cout << "Misses: " << misses << "\n";
-	}
 
 	// Update grid flashing timer
 	if (grid_state != neutral) {
@@ -151,7 +148,7 @@ void PlayMode::update(float elapsed) {
 	}
 
 	// Make grid grey on beat within tolerance window to prompt input, overridden by correct or incorrect presses
-	if (grid_state == neutral && timer >= -timing_tolerance && timer <= timing_tolerance) {
+	if (grid_state == neutral && timer >= -timing_tolerance && timer <= timing_tolerance + elapsed) {
 		grid_state = prompt;
 	}
 
@@ -166,7 +163,7 @@ void PlayMode::update(float elapsed) {
 
 	// Check for on-beat input
 	if (space.downs == 1) {
-		if (timer >= -timing_tolerance && timer <= timing_tolerance) {
+		if (timer >= -timing_tolerance && timer <= timing_tolerance + elapsed) {
 			timer = bpm + timer; // reset timer and account for error within tolerance window
 			hits++;
 			// Flash grid green
@@ -190,7 +187,7 @@ void PlayMode::update(float elapsed) {
 			grid_color = glm::u8vec4(0x00, 0xff, 0x00, 0xff);
 			break;
 		case prompt:
-			grid_color = glm::u8vec4(0xaa, 0xff, 0xaa, 0xff);
+			grid_color = glm::u8vec4(0xdd, 0xff, 0xdd, 0xff);
 			break;
 		default:
 			grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0xff);
