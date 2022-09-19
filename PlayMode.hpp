@@ -12,7 +12,7 @@ struct PlayMode : Mode {
 	PlayMode();
 	virtual ~PlayMode();
 
-	//functions called by main loop:
+	// Functions called by main loop:
 	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
@@ -25,17 +25,16 @@ struct PlayMode : Mode {
 		uint8_t pressed = 0;
 	} left, right, down, up, space;
 
-	//local copy of the game scene (so code can change it during gameplay):
+	// Local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
 
-	//hexapod leg to wobble:
-	Scene::Transform *hip = nullptr;
-	Scene::Transform *upper_leg = nullptr;
-	Scene::Transform *lower_leg = nullptr;
-	glm::quat hip_base_rotation;
-	glm::quat upper_leg_base_rotation;
-	glm::quat lower_leg_base_rotation;
-	float wobble = 0.0f;
+	// Hearts
+	Scene::Transform* cur_heart = nullptr;
+	Scene::Transform *good_heart = nullptr;
+	Scene::Transform* mid_heart = nullptr;
+	Scene::Transform* bad_heart = nullptr;
+	glm::vec3 hearth_base_pos;
+	glm::quat heart_base_rotation;
 
 	// Music + Beat Detection
 	std::shared_ptr< Sound::PlayingSample > music_loop;
