@@ -136,19 +136,32 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 void PlayMode::update(float elapsed) {
 
-	timer -= elapsed; // need to reset if user doesn't input for more than like half a beat
-	// Player missed the last beat so reset the timer
-	if (timer < -timing_tolerance) {
-		std::cout << "Missed the last beat" << std::endl;
-		timer = bpm + timer;
+	// Update beat detection timer
+	timer -= elapsed;
+	// Update grid flashing timer
+	if (grid_state != neutral) {
+		grid_timer -= elapsed;
+		if (grid_timer < 0.0f) {
+			grid_state = neutral;
+		}
+	}
 
-		// Flash grid red
-		grid_timer = grid_flash_duration;
+	// Make grid grey on beat within tolerance window to prompt input, overridden by correct or incorrect presses
+	if (grid_state == neutral && timer >= -timing_tolerance && timer <= timing_tolerance) {
 		grid_state = less_negative;
 	}
+	// Player missed the last beat so reset the timer
+	else if (timer < -timing_tolerance) {
+		timer = bpm + timer;
+		// Flash grid red
+		grid_timer = grid_flash_duration;
+		grid_state = negative;
+	}
+
+	// Check for on-beat input
 	if (space.downs == 1) {
+		std::cout << "Click" << std::endl;
 		if (timer >= -timing_tolerance && timer <= timing_tolerance) {
-			std::cout << "Hit it!" << std::endl;
 			timer = bpm + timer; // reset timer and account for error within tolerance window
 			// Flash grid green
 			grid_timer = grid_flash_duration;
@@ -163,12 +176,6 @@ void PlayMode::update(float elapsed) {
 	}
 
 	// Set grid color
-	if (grid_state != neutral) {
-		grid_timer -= elapsed;
-		if (grid_timer < 0.0f) {
-			grid_state = neutral;
-		}
-	}
 	switch (grid_state) {
 		case negative:
 			grid_color = glm::u8vec4(0xff, 0x00, 0x00, 0xff);
@@ -177,12 +184,13 @@ void PlayMode::update(float elapsed) {
 			grid_color = glm::u8vec4(0x00, 0xff, 0x00, 0xff);
 			break;
 		case less_negative:
-			grid_color = glm::u8vec4(0x8f, 0x8f, 0x8f, 0xff);
+			grid_color = glm::u8vec4(0xea, 0xea, 0xea, 0xff);
 			break;
 		default:
-			grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0x00);
+			grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0xff);
 	}
 
+	
 	// Update scrolling text position
 	message_offset += 0.005f;
 
