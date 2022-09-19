@@ -142,7 +142,6 @@ void PlayMode::update(float elapsed) {
 		//std::cout << "Misses: " << misses << "\n";
 	}
 
-
 	// Update grid flashing timer
 	if (grid_state != neutral) {
 		grid_timer -= elapsed;
@@ -155,10 +154,11 @@ void PlayMode::update(float elapsed) {
 	if (grid_state == neutral && timer >= -timing_tolerance && timer <= timing_tolerance) {
 		grid_state = prompt;
 	}
+
 	// Player missed the last beat so reset the timer
-	else if (timer < -timing_tolerance) {
+	if (timer < -timing_tolerance) {
 		timer = bpm + timer;
-		misses++;
+		missed_beats++;
 		// Flash grid red
 		grid_timer = grid_flash_duration;
 		grid_state = negative;
@@ -168,11 +168,13 @@ void PlayMode::update(float elapsed) {
 	if (space.downs == 1) {
 		if (timer >= -timing_tolerance && timer <= timing_tolerance) {
 			timer = bpm + timer; // reset timer and account for error within tolerance window
+			hits++;
 			// Flash grid green
 			grid_timer = grid_flash_duration;
 			grid_state = positive;
 		}
 		else {
+			misses++;
 			// Flash grid red
 			grid_timer = grid_flash_duration;
 			grid_state = negative;
@@ -188,7 +190,7 @@ void PlayMode::update(float elapsed) {
 			grid_color = glm::u8vec4(0x00, 0xff, 0x00, 0xff);
 			break;
 		case prompt:
-			grid_color = glm::u8vec4(0xdd, 0xdd, 0xdd, 0xff);
+			grid_color = glm::u8vec4(0xaa, 0xff, 0xaa, 0xff);
 			break;
 		default:
 			grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0xff);
@@ -303,6 +305,20 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			// Set text so that lest edge of new leftmost character is just off the right side of the screen
 			message_offset = 0;
 		}
+
+		// Stats text
+		lines.draw_text("Hits : " + std::to_string(hits),
+			glm::vec3(0.35f * aspect, (-H * aspect) + 0.1f, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		lines.draw_text("Missed beats : " + std::to_string(missed_beats),
+			glm::vec3(0.35f * aspect, (-2 * H * aspect) + 0.1f, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		lines.draw_text("Misses : " + std::to_string(misses),
+			glm::vec3(0.35f * aspect, (-3 * H * aspect) + 0.1f, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 		
 		// Draw grid
 		DrawLines grid(glm::mat4(
