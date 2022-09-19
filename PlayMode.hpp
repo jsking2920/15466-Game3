@@ -37,17 +37,22 @@ struct PlayMode : Mode {
 	glm::quat lower_leg_base_rotation;
 	float wobble = 0.0f;
 
+	// Music + Beat Detection
 	std::shared_ptr< Sound::PlayingSample > music_loop;
 	float bpm = 60.0f / 75.0f; // (60 / BPM) BPM of taiko is actually 150 but its got a half time feel
 	float timer = bpm; // Timer counts down from bpm, player tries to input on or near "0"
-	float timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
+	float timing_tolerance = bpm / 6.0f; // Can miss by up to an sixth of a beat and still count as a hit
+
+	// Stats
+	int misses = 0;
+	int hits = 0;
 	
 	// Camera
 	Scene::Camera *camera = nullptr;
 
 	// Grid
 	enum GridState {
-		positive, negative, less_negative, neutral
+		positive, negative, prompt, neutral
 	};
 	GridState grid_state = neutral;
 	glm::u8vec4 grid_color = glm::u8vec4(0xff);
