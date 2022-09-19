@@ -32,12 +32,11 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
-
 	});
 });
 
 Load< Sound::Sample > normal_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("audio/TaikoLoop.opus"));
+	return new Sound::Sample(data_path("audio/TaikoLoop.opus")); //150 BPM
 });
 
 PlayMode::PlayMode() : scene(*hexapod_scene) {
@@ -59,9 +58,8 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
 
-	//start music loop playing:
-	// (note: position will be over-ridden in update())
-	leg_tip_loop = Sound::loop_3D(*normal_music_sample, 1.0f, get_leg_tip_position(), 10.0f);
+	// Start music loop playing:
+	music_loop = Sound::loop(*normal_music_sample);
 }
 
 PlayMode::~PlayMode() {
@@ -149,9 +147,6 @@ void PlayMode::update(float elapsed) {
 		glm::vec3(0.0f, 0.0f, 1.0f)
 	);
 
-	//move sound to follow leg tip position:
-	leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
-
 	//move camera:
 	{
 		//combine inputs into a move:
@@ -232,13 +227,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00),
 			message_anchor_out);
 
-		// FYI, How to check to see if rightmost edge of text is at the right side of the screen: st_anchor_out->x > aspect
-		//std::cout << "message_x * H - apect: " << message_x * H - aspect << "\n" << "anchor out x: " << message_anchor_out->x << std::endl;
-		// Check to see if anchor has scrolled off the right side of the screen
+		// Check to see if the rightmost edge of the text has scrolled off the left side of the screen
 		if (message_anchor_out->x < -aspect) {
 			// Set next message, loop back to beginning if neccesary
 			cur_message_ind = (cur_message_ind + 1) % messages.size();
-			// Set text so that right edge of new rightmost character is just off the left side of the screen
+			// Set text so that lest edge of new leftmost character is just off the right side of the screen
 			message_offset = 0;
 		}
 		
@@ -261,9 +254,4 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0));
 	}
 	GL_ERRORS();
-}
-
-glm::vec3 PlayMode::get_leg_tip_position() {
-	//the vertex position here was read from the model in blender:
-	return lower_leg->make_local_to_world() * glm::vec4(-1.26137f, -11.861f, 0.0f, 1.0f);
 }
