@@ -150,8 +150,13 @@ void PlayMode::update(float elapsed) {
 	// Update scrolling text position
 	message_offset += 0.005f;
 
-	// Roate Heart
-	cur_heart->rotation *= glm::angleAxis(glm::radians(elapsed * 15.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	// Rotate Heart
+	cur_heart->rotation *= glm::angleAxis(glm::radians(elapsed * 18.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	// Beat heart in time
+	float lerp_t = ((bpm - timer) / bpm);
+	float sin = std::sin(lerp_t * float(M_PI));
+	float scalar = (std::abs(sin) * 0.2f) + 0.8f;
+	cur_heart->scale = glm::vec3(scalar);
 
 	// Reset button press counters:
 	space.downs = 0;
