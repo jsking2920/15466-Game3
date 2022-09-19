@@ -36,7 +36,7 @@ Load< Scene > main_scene(LoadTagDefault, []() -> Scene const * {
 });
 
 Load< Sound::Sample > normal_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("audio/TaikoLoop.opus"));
+	return new Sound::Sample(data_path("TaikoLoop.opus"));
 });
 
 PlayMode::PlayMode() : scene(*main_scene) {
