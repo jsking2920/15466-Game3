@@ -88,6 +88,11 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.pressed = true;
 			return true;
 		}
+		else if (evt.key.keysym.sym == SDLK_SPACE) {
+			space.downs += 1;
+			space.pressed = true;
+			return true;
+		}
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {
 			left.pressed = false;
@@ -100,6 +105,10 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			return true;
 		} else if (evt.key.keysym.sym == SDLK_s) {
 			down.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_SPACE) {
+			space.pressed = false;
 			return true;
 		}
 	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
@@ -126,6 +135,53 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
+
+	timer -= elapsed; // need to reset if user doesn't input for more than like half a beat
+	// Player missed the last beat so reset the timer
+	if (timer < -timing_tolerance) {
+		std::cout << "Missed the last beat" << std::endl;
+		timer = bpm + timer;
+
+		// Flash grid red
+		grid_timer = grid_flash_duration;
+		grid_state = less_negative;
+	}
+	if (space.downs == 1) {
+		if (timer >= -timing_tolerance && timer <= timing_tolerance) {
+			std::cout << "Hit it!" << std::endl;
+			timer = bpm + timer; // reset timer and account for error within tolerance window
+			// Flash grid green
+			grid_timer = grid_flash_duration;
+			grid_state = positive;
+		}
+		else {
+			// Flash grid red
+			grid_timer = grid_flash_duration;
+			grid_state = negative;
+			std::cout << "You suuuuuuuuuuuck" << std::endl;
+		}
+	}
+
+	// Set grid color
+	if (grid_state != neutral) {
+		grid_timer -= elapsed;
+		if (grid_timer < 0.0f) {
+			grid_state = neutral;
+		}
+	}
+	switch (grid_state) {
+		case negative:
+			grid_color = glm::u8vec4(0xff, 0x00, 0x00, 0xff);
+			break;
+		case positive:
+			grid_color = glm::u8vec4(0x00, 0xff, 0x00, 0xff);
+			break;
+		case less_negative:
+			grid_color = glm::u8vec4(0x8f, 0x8f, 0x8f, 0xff);
+			break;
+		default:
+			grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0x00);
+	}
 
 	// Update scrolling text position
 	message_offset += 0.005f;
@@ -180,6 +236,7 @@ void PlayMode::update(float elapsed) {
 	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+	space.downs = 0;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -243,15 +300,15 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			0.0f, 0.0f, 0.0f, 1.0f
 		));
 		// Grid
-		grid.draw(glm::vec3(-2, 0.07f, 0), glm::vec3(2, 0.07f, 0));
-		grid.draw(glm::vec3(-0.33f, 2, 0), glm::vec3(-0.33f, -0.85f, 0));
-		grid.draw(glm::vec3(0.33f, 2, 0), glm::vec3(0.33f, -0.85f, 0));
-		grid.draw(glm::vec3(-2, -0.85f, 0), glm::vec3(2, -0.85f, 0));
+		grid.draw(glm::vec3(-2, 0.07f, 0), glm::vec3(2, 0.07f, 0), grid_color);
+		grid.draw(glm::vec3(-0.33f, 2, 0), glm::vec3(-0.33f, -0.85f, 0), grid_color);
+		grid.draw(glm::vec3(0.33f, 2, 0), glm::vec3(0.33f, -0.85f, 0), grid_color);
+		grid.draw(glm::vec3(-2, -0.85f, 0), glm::vec3(2, -0.85f, 0), grid_color);
 		// Frame
-		grid.draw(glm::vec3(-2, 0.997f, 0), glm::vec3(2, 0.997f, 0));
-		grid.draw(glm::vec3(-2, -0.997f, 0), glm::vec3(2, -0.997f, 0));
-		grid.draw(glm::vec3(-0.998f, 2, 0), glm::vec3(-0.998f, -2, 0));
-		grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0));
+		grid.draw(glm::vec3(-2, 0.997f, 0), glm::vec3(2, 0.997f, 0), grid_color);
+		grid.draw(glm::vec3(-2, -0.997f, 0), glm::vec3(2, -0.997f, 0), grid_color);
+		grid.draw(glm::vec3(-0.998f, 2, 0), glm::vec3(-0.998f, -2, 0), grid_color);
+		grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0), grid_color);
 	}
 	GL_ERRORS();
 }

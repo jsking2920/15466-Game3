@@ -23,7 +23,7 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} left, right, down, up;
+	} left, right, down, up, space;
 
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
@@ -38,9 +38,21 @@ struct PlayMode : Mode {
 	float wobble = 0.0f;
 
 	std::shared_ptr< Sound::PlayingSample > music_loop;
+	float bpm = 60.0f / 75.0f; // (60 / BPM) BPM of taiko is actually 150 but its got a half time feel
+	float timer = bpm; // Timer counts down from bpm, player tries to input on or near "0"
+	float timing_tolerance = bpm / 16.0f; // Can miss by up to an sixteenth of a beat
 	
-	//camera:
+	// Camera
 	Scene::Camera *camera = nullptr;
+
+	// Grid
+	enum GridState {
+		positive, negative, less_negative, neutral
+	};
+	GridState grid_state = neutral;
+	glm::u8vec4 grid_color = glm::u8vec4(0xff);
+	float grid_flash_duration = bpm / 3.0f; // how long grid color flashes last
+	float grid_timer = grid_flash_duration;
 
 	// Scrolling text
 	float message_offset = 0.1f;
