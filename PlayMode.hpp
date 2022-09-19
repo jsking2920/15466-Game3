@@ -19,7 +19,7 @@ struct PlayMode : Mode {
 
 	//----- game state -----
 
-	//input tracking:
+	// Input tracking:
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
@@ -42,10 +42,12 @@ struct PlayMode : Mode {
 	float timer = bpm; // Timer counts down from bpm, player tries to input on or near "0"
 	float timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
 
-	// Stats
-	int missed_beats = 0;
-	int hits = 0;
-	int misses = 0;
+	// Player stats
+
+	// Timing stats
+	uint16_t missed_beats = 0;
+	uint16_t hits = 0;
+	uint16_t misses = 0; // Off time clicks
 	
 	// Camera
 	Scene::Camera *camera = nullptr;
