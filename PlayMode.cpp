@@ -12,6 +12,8 @@
 
 #include <random>
 
+// ---------------------- Load Functions ----------------
+
 GLuint heart_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > heart_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	MeshBuffer const *ret = new MeshBuffer(data_path("DanceOrDie.pnct"));
@@ -43,6 +45,8 @@ Load< Sound::Sample > negative_sfx_sample(LoadTagDefault, []() -> Sound::Sample 
 	return new Sound::Sample(data_path("NegativeSFX.opus"));
 });
 
+// --------------------------------------
+
 PlayMode::PlayMode() : scene(*main_scene) {
 	// Get pointers to hearts
 	for (auto &transform : scene.transforms) {
@@ -69,6 +73,7 @@ PlayMode::PlayMode() : scene(*main_scene) {
 	music_loop = Sound::loop(*normal_music_sample);
 
 	initialize_player_stats(false);
+	game_state = menu;
 }
 
 PlayMode::~PlayMode() {
@@ -129,8 +134,21 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 	return false;
 }
 
+// ------------ Update Functions -----------------
+
 void PlayMode::update(float elapsed) {
-	game_update(elapsed);
+	switch (game_state) {
+		case game:
+			game_update(elapsed);
+			break;
+		case pause:
+			pause_update(elapsed);
+			break;
+		default:
+		case menu:
+			menu_update(elapsed);
+			break;
+	}
 }
 
 void PlayMode::game_update(float elapsed) {
@@ -267,7 +285,14 @@ void PlayMode::menu_update(float elapsed) {
 
 }
 
+void PlayMode::pause_update(float elapsed) {
+
+}
+
+// -------------- Draw Functions ---------------
+
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
+
 	//update camera aspect ratio for drawable:
 	camera->aspect = float(drawable_size.x) / float(drawable_size.y);
 
@@ -275,7 +300,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	// TODO: consider using the Light(s) in the scene to do this
 	glUseProgram(lit_color_texture_program->program);
 	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
+	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f, -1.0f)));
 	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
 	glUseProgram(0);
 
@@ -288,145 +313,196 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	scene.draw(*camera);
 
-	{
-		glDisable(GL_DEPTH_TEST);
-		float aspect = float(drawable_size.x) / float(drawable_size.y);
-		
-		// Draw grid
-		DrawLines grid(glm::mat4(
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		));
-		// Grid
-		grid.draw(glm::vec3(-2, 0.07f, 0), glm::vec3(2, 0.07f, 0), grid_color);
-		grid.draw(glm::vec3(-0.33f, 2, 0), glm::vec3(-0.33f, -0.85f, 0), grid_color);
-		grid.draw(glm::vec3(0.33f, 2, 0), glm::vec3(0.33f, -0.85f, 0), grid_color);
-		grid.draw(glm::vec3(-2, -0.85f, 0), glm::vec3(2, -0.85f, 0), grid_color);
-		// Frame
-		grid.draw(glm::vec3(-2, 0.998f, 0), glm::vec3(2, 0.998f, 0), grid_color);
-		grid.draw(glm::vec3(-2, -0.998f, 0), glm::vec3(2, -0.998f, 0), grid_color);
-		grid.draw(glm::vec3(-0.998f, 2, 0), glm::vec3(-0.998f, -2, 0), grid_color);
-		grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0), grid_color);
-
-
-		// Draw Text
-		DrawLines lines(glm::mat4(
-			1.0f / aspect, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		));
-
-		// Specifies text heights
-		constexpr float H1 = 0.2f;
-		constexpr float H2 = 0.08f; 
-
-		// Scrolling Text
-		lines.draw_text(messages[cur_message_ind],
-			glm::vec3(aspect - message_offset * H2, -1.0 + 0.45f * H2, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text(messages[cur_message_ind],
-			glm::vec3(aspect - message_offset * H2 + ofs, -1.0 + 0.45f * H2 + ofs, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00),
-			message_anchor_out);
-
-		// Check to see if the rightmost edge of the text has scrolled off the left side of the screen
-		if (message_anchor_out->x < -aspect) {
-			// Set next message, loop back to beginning if neccesary
-			cur_message_ind = (cur_message_ind + 1) % messages.size();
-			// Set text so that lest edge of new leftmost character is just off the right side of the screen
-			message_offset = 0;
-		}
-
-		// Timing stats text
-		lines.draw_text("Hits : " + std::to_string(hits),
-			glm::vec3(0.35f * aspect, (-H2 * aspect) + 0.1f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text("Missed beats : " + std::to_string(missed_beats),
-			glm::vec3(0.35f * aspect, (-2 * H2 * aspect) + 0.1f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text("Misses : " + std::to_string(misses),
-			glm::vec3(0.35f * aspect, (-3 * H2 * aspect) + 0.1f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-
-		// Player stats text
-		lines.draw_text("Hunger",
-			glm::vec3((-3.0f / 4.0f) * aspect - 0.07f, (H1 * aspect) + 0.25f, 0.0),
-			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
-			get_stat_text_color(hunger));
-		lines.draw_text(std::to_string(hunger.cur) + "/" + std::to_string(hunger.max),
-			glm::vec3((-3.0f / 4.0f) * aspect + 0.08f, (H2 * aspect) + 0.23f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			get_stat_text_color(hunger));
-		lines.draw_text("[ E ] at",
-			glm::vec3((-3.0f / 4.0f) * aspect + 0.06f, (H2 * aspect) + 0.05f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-
-		lines.draw_text("Food",
-			glm::vec3((-3.0f / 4.0f) * aspect - 0.02f, (H1 * -aspect) + 0.05f, 0.0),
-			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text(std::to_string(food.cur),
-			glm::vec3((-3.0f / 4.0f) * aspect + 0.13f, (H2 * -aspect) - 0.32f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text("[ G ] ather",
-			glm::vec3((-3.0f / 4.0f) * aspect + 0.0f, (H2 * -aspect) - 0.47f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-
-		lines.draw_text("Thirst",
-			glm::vec3(-0.22f, (H1 * aspect) + 0.25f, 0.0),
-			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
-			get_stat_text_color(thirst));
-		lines.draw_text(std::to_string(thirst.cur) + "/" + std::to_string(thirst.max),
-			glm::vec3(-0.09f, (H2 * aspect) + 0.23f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			get_stat_text_color(thirst));
-		lines.draw_text("[ D ] rink",
-			glm::vec3(-0.13f, (H2 * aspect) + 0.05f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-
-		lines.draw_text("Water",
-			glm::vec3(-0.16, (H1 * -aspect) + 0.05f, 0.0),
-			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text(std::to_string(water.cur),
-			glm::vec3(0.0f, (H2 * -aspect) - 0.32f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text("[ G ] ather",
-			glm::vec3(-0.15f, (H2 * -aspect) - 0.47f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-
-		lines.draw_text("Fatigue",
-			glm::vec3((1.0f / 2.0f) * aspect + 0.07f, (H1 * aspect) + 0.25f, 0.0),
-			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
-			get_stat_text_color(fatigue));
-		lines.draw_text(std::to_string(fatigue.cur) + "/" + std::to_string(fatigue.max),
-			glm::vec3((1.0f / 2.0f) * aspect + 0.20f, (H2 * aspect) + 0.23f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			get_stat_text_color(fatigue));
-		lines.draw_text("[ S ] leep",
-			glm::vec3((1.0f / 2.0f) * aspect + 0.16f, (H2 * aspect) + 0.05f, 0.0),
-			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+	switch (game_state) {
+		case game:
+			game_draw_ui(drawable_size);
+			break;
+		case pause:
+			pause_draw_ui(drawable_size);
+			break;
+		default:
+		case menu:
+			menu_draw_ui(drawable_size);
+			break;
 	}
+
 	GL_ERRORS();
 }
 
+void PlayMode::game_draw_ui(glm::uvec2 const& drawable_size) {
+
+	glDisable(GL_DEPTH_TEST);
+	float aspect = float(drawable_size.x) / float(drawable_size.y);
+		
+	// Draw grid
+	DrawLines grid(glm::mat4(
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	));
+	// Grid
+	grid.draw(glm::vec3(-2, 0.07f, 0), glm::vec3(2, 0.07f, 0), grid_color);
+	grid.draw(glm::vec3(-0.33f, 2, 0), glm::vec3(-0.33f, -0.85f, 0), grid_color);
+	grid.draw(glm::vec3(0.33f, 2, 0), glm::vec3(0.33f, -0.85f, 0), grid_color);
+	grid.draw(glm::vec3(-2, -0.85f, 0), glm::vec3(2, -0.85f, 0), grid_color);
+	// Frame
+	grid.draw(glm::vec3(-2, 0.998f, 0), glm::vec3(2, 0.998f, 0), grid_color);
+	grid.draw(glm::vec3(-2, -0.998f, 0), glm::vec3(2, -0.998f, 0), grid_color);
+	grid.draw(glm::vec3(-0.998f, 2, 0), glm::vec3(-0.998f, -2, 0), grid_color);
+	grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0), grid_color);
+
+
+	// Draw Text
+	DrawLines lines(glm::mat4(
+		1.0f / aspect, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	));
+
+	// Specifies text heights
+	constexpr float H1 = 0.2f;
+	constexpr float H2 = 0.08f;
+
+	// Scrolling Text
+	lines.draw_text(messages[cur_message_ind],
+		glm::vec3(aspect - message_offset * H2, -1.0 + 0.45f * H2, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+	float ofs = 2.0f / drawable_size.y;
+	lines.draw_text(messages[cur_message_ind],
+		glm::vec3(aspect - message_offset * H2 + ofs, -1.0 + 0.45f * H2 + ofs, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0x00),
+		message_anchor_out);
+
+	// Check to see if the rightmost edge of the text has scrolled off the left side of the screen
+	if (message_anchor_out->x < -aspect) {
+		// Set next message, loop back to beginning if neccesary
+		cur_message_ind = (cur_message_ind + 1) % messages.size();
+		// Set text so that lest edge of new leftmost character is just off the right side of the screen
+		message_offset = 0;
+	}
+
+	// Timing stats text
+	lines.draw_text("Hits : " + std::to_string(hits),
+		glm::vec3(0.35f * aspect, (-H2 * aspect) + 0.1f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+	lines.draw_text("Missed beats : " + std::to_string(missed_beats),
+		glm::vec3(0.35f * aspect, (-2 * H2 * aspect) + 0.1f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+	lines.draw_text("Misses : " + std::to_string(misses),
+		glm::vec3(0.35f * aspect, (-3 * H2 * aspect) + 0.1f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+	// Player stats text
+	lines.draw_text("Hunger",
+		glm::vec3((-3.0f / 4.0f) * aspect - 0.07f, (H1 * aspect) + 0.25f, 0.0),
+		glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+		get_stat_text_color(hunger));
+	lines.draw_text(std::to_string(hunger.cur) + "/" + std::to_string(hunger.max),
+		glm::vec3((-3.0f / 4.0f) * aspect + 0.08f, (H2 * aspect) + 0.23f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		get_stat_text_color(hunger));
+	lines.draw_text("[ E ] at",
+		glm::vec3((-3.0f / 4.0f) * aspect + 0.06f, (H2 * aspect) + 0.05f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+	lines.draw_text("Food",
+		glm::vec3((-3.0f / 4.0f) * aspect - 0.02f, (H1 * -aspect) + 0.05f, 0.0),
+		glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+	lines.draw_text(std::to_string(food.cur),
+		glm::vec3((-3.0f / 4.0f) * aspect + 0.13f, (H2 * -aspect) - 0.32f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+	lines.draw_text("[ G ] ather",
+		glm::vec3((-3.0f / 4.0f) * aspect + 0.0f, (H2 * -aspect) - 0.47f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+	lines.draw_text("Thirst",
+		glm::vec3(-0.22f, (H1 * aspect) + 0.25f, 0.0),
+		glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+		get_stat_text_color(thirst));
+	lines.draw_text(std::to_string(thirst.cur) + "/" + std::to_string(thirst.max),
+		glm::vec3(-0.09f, (H2 * aspect) + 0.23f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		get_stat_text_color(thirst));
+	lines.draw_text("[ D ] rink",
+		glm::vec3(-0.13f, (H2 * aspect) + 0.05f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+	lines.draw_text("Water",
+		glm::vec3(-0.16, (H1 * -aspect) + 0.05f, 0.0),
+		glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+	lines.draw_text(std::to_string(water.cur),
+		glm::vec3(0.0f, (H2 * -aspect) - 0.32f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+	lines.draw_text("[ G ] ather",
+		glm::vec3(-0.15f, (H2 * -aspect) - 0.47f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+	lines.draw_text("Fatigue",
+		glm::vec3((1.0f / 2.0f) * aspect + 0.07f, (H1 * aspect) + 0.25f, 0.0),
+		glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+		get_stat_text_color(fatigue));
+	lines.draw_text(std::to_string(fatigue.cur) + "/" + std::to_string(fatigue.max),
+		glm::vec3((1.0f / 2.0f) * aspect + 0.20f, (H2 * aspect) + 0.23f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		get_stat_text_color(fatigue));
+	lines.draw_text("[ S ] leep",
+		glm::vec3((1.0f / 2.0f) * aspect + 0.16f, (H2 * aspect) + 0.05f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+}
+
+void PlayMode::menu_draw_ui(glm::uvec2 const& drawable_size) {
+
+	glDisable(GL_DEPTH_TEST);
+	float aspect = float(drawable_size.x) / float(drawable_size.y);
+
+	DrawLines lines(glm::mat4(
+		1.0f / aspect, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	));
+
+	// Specifies text heights
+	constexpr float H1 = 0.4f;
+	constexpr float H2 = 0.1f;
+
+	// Title
+	lines.draw_text("HEARTBEAT SURVIVAL",
+		glm::vec3(-aspect + 0.05f, -0.95f, 0),
+		glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+	// Start Prompt
+	lines.draw_text("[ 1 ] for easy  /  [ 2 ] for hard",
+		glm::vec3(-0.6f, 0, 0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xcc, 0xcc, 0xcc, 0xcc));
+}
+
+void PlayMode::pause_draw_ui(glm::uvec2 const& drawable_size) {
+
+}
+
+// --------------- Helper Functions -------------------------
+
 glm::u8vec4 PlayMode::get_stat_text_color(PlayerStat stat) {
+
 	switch (stat.status) {
 		case zero:
 			return glm::u8vec4(0x00, 0x00, 0x00, 0xff);
@@ -445,10 +521,12 @@ glm::u8vec4 PlayMode::get_stat_text_color(PlayerStat stat) {
 }
 
 PlayMode::StatStatus PlayMode::get_overall_health() {
+
 	return (StatStatus)std::min({ (int)hunger.status, (int)thirst.status, (int)fatigue.status });
 }
 
 void PlayMode::set_heart(Scene::Transform* new_heart) {
+
 	if (cur_heart != new_heart) {
 		new_heart->position = heart_base_pos;
 		new_heart->rotation = cur_heart->rotation;
@@ -462,6 +540,7 @@ void PlayMode::set_heart(Scene::Transform* new_heart) {
 }
 
 void PlayMode::initialize_player_stats(bool is_hard_mode) {
+
 	if (is_hard_mode) {
 		hunger.max = 10;
 		hunger.cur = 8;

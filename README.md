@@ -1,8 +1,8 @@
-# Dance or Die!
+# Heartbeat Survival
 
 Author: Scott King
 
-Design: Dance or Die is a combination of rhythm, idle, and survival games inspired by Crypt of the Necrodancer, Trimps, and Don't Starve. 
+Design: Heartbeat Survival is a combination of rhythm, idle, and survival games inspired by Crypt of the Necrodancer, Trimps, and Don't Starve. 
 
 Screen Shot:
 

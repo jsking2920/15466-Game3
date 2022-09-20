@@ -21,8 +21,17 @@ struct PlayMode : Mode {
 	// Update functions based on game state
 	void game_update(float elapsed);
 	void menu_update(float elapsed);
+	void pause_update(float elapsed);
+	// Draw functions based on game state
+	void game_draw_ui(glm::uvec2 const& drawable_size);
+	void menu_draw_ui(glm::uvec2 const& drawable_size);
+	void pause_draw_ui(glm::uvec2 const& drawable_size);
 
 	//----- game state -----
+	enum GameState {
+		menu, game, pause
+	};
+	GameState game_state = menu;
 
 	// Input tracking
 	struct Button {
@@ -42,9 +51,9 @@ struct PlayMode : Mode {
 	glm::quat heart_base_rotation;
 
 	// Music + Beat Detection
-	std::shared_ptr< Sound::PlayingSample > music_loop;
-	float bpm = 60.0f / 75.0f; // (60 / BPM) BPM of taiko is actually 150 but its got a half time feel
 	float timer = bpm; // Timer counts down from bpm, player tries to input on or near "0"
+	float bpm = 60.0f / 75.0f; // (60 / BPM) BPM of taiko is actually 150 but its got a half time feel
+	std::shared_ptr< Sound::PlayingSample > music_loop;
 	float timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
 
 	// Player stats
@@ -96,7 +105,7 @@ struct PlayMode : Mode {
 
 	// Scrolling text
 	float message_offset = 0.1f;
-	float message_speed = 0.005f;
+	float message_speed = 1.0f;
 	glm::vec3* message_anchor_out = new glm::vec3();
 	uint8_t cur_message_ind = 0;
 	std::vector<std::string> messages = { "First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message" };
