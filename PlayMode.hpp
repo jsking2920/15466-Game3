@@ -51,8 +51,8 @@ struct PlayMode : Mode {
 	glm::quat heart_base_rotation;
 
 	// Music + Beat Detection
-	float timer = bpm; // Timer counts down from bpm, player tries to input on or near "0"
 	float bpm = 60.0f / 75.0f; // (60 / BPM) BPM of taiko is actually 150 but its got a half time feel
+	float timer = bpm; // Timer counts down from bpm, player tries to input on or near "0"
 	std::shared_ptr< Sound::PlayingSample > music_loop;
 	float timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
 
