@@ -49,6 +49,8 @@ struct PlayMode : Mode {
 	uint8_t max_thirst = 10;
 	uint8_t thirst = max_thirst; // 10/10: full, not thirsty  0/10: dehydrated to death
 	uint16_t water = 0; // amount of stored water
+	uint8_t max_fatigue = 10;
+	uint8_t fatigue = max_fatigue; // 10/10: well rested, not tired  0/10: exhausted
 
 	// Timing stats
 	uint16_t missed_beats = 0;

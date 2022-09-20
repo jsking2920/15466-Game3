@@ -199,8 +199,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		grid.draw(glm::vec3(0.33f, 2, 0), glm::vec3(0.33f, -0.85f, 0), grid_color);
 		grid.draw(glm::vec3(-2, -0.85f, 0), glm::vec3(2, -0.85f, 0), grid_color);
 		// Frame
-		grid.draw(glm::vec3(-2, 0.997f, 0), glm::vec3(2, 0.997f, 0), grid_color);
-		grid.draw(glm::vec3(-2, -0.997f, 0), glm::vec3(2, -0.997f, 0), grid_color);
+		grid.draw(glm::vec3(-2, 0.998f, 0), glm::vec3(2, 0.998f, 0), grid_color);
+		grid.draw(glm::vec3(-2, -0.998f, 0), glm::vec3(2, -0.998f, 0), grid_color);
 		grid.draw(glm::vec3(-0.998f, 2, 0), glm::vec3(-0.998f, -2, 0), grid_color);
 		grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0), grid_color);
 
@@ -253,9 +253,69 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 		// Player stats text
 		lines.draw_text("Hunger",
-			glm::vec3((-3.0f / 4.0f) * aspect - 0.05f, (H1 * aspect) + 0.3f, 0.0),
+			glm::vec3((-3.0f / 4.0f) * aspect - 0.07f, (H1 * aspect) + 0.25f, 0.0),
 			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
 			get_stat_text_color(hunger, max_hunger));
+		lines.draw_text(std::to_string(hunger) + "/" + std::to_string(max_hunger),
+			glm::vec3((-3.0f / 4.0f) * aspect + 0.08f, (H2 * aspect) + 0.23f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			get_stat_text_color(hunger, max_hunger));
+		lines.draw_text("[ E ] at",
+			glm::vec3((-3.0f / 4.0f) * aspect + 0.06f, (H2 * aspect) + 0.05f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+		lines.draw_text("Food",
+			glm::vec3((-3.0f / 4.0f) * aspect - 0.02f, (H1 * -aspect) + 0.05f, 0.0),
+			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		lines.draw_text(std::to_string(food),
+			glm::vec3((-3.0f / 4.0f) * aspect + 0.13f, (H2 * -aspect) - 0.32f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		lines.draw_text("[ G ] ather",
+			glm::vec3((-3.0f / 4.0f) * aspect + 0.0f, (H2 * -aspect) - 0.47f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+		lines.draw_text("Thirst",
+			glm::vec3(-0.22f, (H1 * aspect) + 0.25f, 0.0),
+			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+			get_stat_text_color(thirst, max_thirst));
+		lines.draw_text(std::to_string(thirst) + "/" + std::to_string(max_thirst),
+			glm::vec3(-0.09f, (H2 * aspect) + 0.23f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			get_stat_text_color(thirst, max_thirst));
+		lines.draw_text("[ D ] rink",
+			glm::vec3(-0.13f, (H2 * aspect) + 0.05f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+		lines.draw_text("Water",
+			glm::vec3(-0.16, (H1 * -aspect) + 0.05f, 0.0),
+			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		lines.draw_text(std::to_string(water),
+			glm::vec3(0.0f, (H2 * -aspect) - 0.32f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		lines.draw_text("[ G ] ather",
+			glm::vec3(-0.15f, (H2 * -aspect) - 0.47f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+		lines.draw_text("Fatigue",
+			glm::vec3((1.0f / 2.0f) * aspect + 0.07f, (H1 * aspect) + 0.25f, 0.0),
+			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+			get_stat_text_color(fatigue, max_fatigue));
+		lines.draw_text(std::to_string(fatigue) + "/" + std::to_string(max_fatigue),
+			glm::vec3((1.0f / 2.0f) * aspect + 0.20f, (H2 * aspect) + 0.23f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			get_stat_text_color(fatigue, max_fatigue));
+		lines.draw_text("[ S ] leep",
+			glm::vec3((1.0f / 2.0f) * aspect + 0.16f, (H2 * aspect) + 0.05f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 	}
 	GL_ERRORS();
 }
