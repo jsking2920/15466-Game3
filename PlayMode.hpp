@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <deque>
+#include <algorithm>
 
 struct PlayMode : Mode {
 	PlayMode();
@@ -17,15 +18,19 @@ struct PlayMode : Mode {
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
+	// Update functions based on game state
+	void game_update(float elapsed);
+	void menu_update(float elapsed);
+
 	//----- game state -----
 
-	// Input tracking:
+	// Input tracking
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
 	} space, g, e, d, s;
 
-	// Local copy of the game scene (so code can change it during gameplay):
+	// Local copy of the game scene (so code can change it during gameplay)
 	Scene scene;
 
 	// Hearts
@@ -43,14 +48,34 @@ struct PlayMode : Mode {
 	float timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
 
 	// Player stats
-	int8_t max_hunger = 10;
-	int8_t hunger = max_hunger; // 10/10: full, not hungry  0/10: starved to death
-	int16_t food = 0; // amount of gathered food
-	int8_t max_thirst = 10;
-	int8_t thirst = max_thirst; // 10/10: full, not thirsty  0/10: dehydrated to death
-	int16_t water = 0; // amount of stored water
-	int8_t max_fatigue = 10;
-	int8_t fatigue = max_fatigue; // 10/10: well rested, not tired  0/10: exhausted
+	enum StatStatus {
+		zero = 0, poor = 1, okay = 2, good = 3
+	};
+	struct PlayerStat {
+		int8_t max; 
+		int8_t cur; // 10/10: full, not thirst, not tired, etc.  0/10: starved, exhausted, dead
+		StatStatus status;
+
+		void update_cur(int8_t offset) {
+			cur = clmp(cur + offset, int8_t(0), max);
+			update_status();
+		}
+
+		void update_status() {
+			if (cur == 0) {
+				status = zero;
+			}
+			else if (cur <= (max / 3)) {
+				status = poor;
+			}
+			else if (cur <= 2 * (max / 3)) {
+				status = okay;
+			}
+			else {
+				status = good;
+			}
+		}
+	} hunger, thirst, food, water, fatigue;
 
 	// Timing stats
 	uint16_t missed_beats = 0;
@@ -71,11 +96,24 @@ struct PlayMode : Mode {
 
 	// Scrolling text
 	float message_offset = 0.1f;
+	float message_speed = 0.005f;
 	glm::vec3* message_anchor_out = new glm::vec3();
 	uint8_t cur_message_ind = 0;
 	std::vector<std::string> messages = { "First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message" };
 
 	// Helper Functions
-	glm::u8vec4 get_stat_text_color(uint16_t cur, uint16_t max);
-	void swap_hearts(Scene::Transform* new_heart, glm::vec3 pos);
+	glm::u8vec4 get_stat_text_color(PlayerStat stat);
+	void set_heart(Scene::Transform* new_heart);
+	void initialize_player_stats(bool is_hard_mode);
+	StatStatus get_overall_health();
+
+	static int8_t clmp(int8_t v, int8_t lo, int8_t hi) {
+		if (v < lo) {
+			return lo;
+		}
+		if (v > hi) {
+			return hi;
+		}
+		return v;
+	}
 };

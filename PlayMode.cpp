@@ -67,6 +67,8 @@ PlayMode::PlayMode() : scene(*main_scene) {
 
 	// Start music loop playing:
 	music_loop = Sound::loop(*normal_music_sample);
+
+	initialize_player_stats(false);
 }
 
 PlayMode::~PlayMode() {
@@ -128,6 +130,10 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
+	game_update(elapsed);
+}
+
+void PlayMode::game_update(float elapsed) {
 
 	// Update beat detection timer
 	timer -= elapsed;
@@ -150,9 +156,9 @@ void PlayMode::update(float elapsed) {
 		timer = bpm + timer;
 		missed_beats++;
 
-		hunger = std::clamp(--hunger, int8_t(0), max_hunger);
-		thirst = std::clamp(--thirst, int8_t(0), max_thirst);
-		fatigue = std::clamp(--fatigue, int8_t(0), max_fatigue);
+		hunger.update_cur(-1);
+		thirst.update_cur(-1);
+		fatigue.update_cur(-1);
 
 		// Flash grid red
 		grid_timer = grid_flash_duration;
@@ -160,7 +166,7 @@ void PlayMode::update(float elapsed) {
 	}
 
 	// Check for on-beat input
-	if (g.downs == 1 || e.downs == 1) {
+	if (g.downs == 1 || e.downs == 1 || d.downs == 1) {
 		// input on time
 		if (timer >= -timing_tolerance && timer <= timing_tolerance + elapsed) {
 			timer = bpm + timer; // reset timer and account for error within tolerance window
@@ -173,17 +179,27 @@ void PlayMode::update(float elapsed) {
 			// Gather
 			if (g.downs == 1) {
 				if (std::rand() % 2 == 0) {
-					food++;
+					food.update_cur(1);
 				}
 				else {
-					water++;
+					water.update_cur(1);
 				}
 			}
 			// Eat
 			if (e.downs == 1) {
-				if (food > 0) {
-					food--;
-					hunger = std::clamp(++hunger, int8_t(0), max_hunger);
+				if (food.cur > 0) {
+					food.update_cur(-1);
+					hunger.update_cur(1);
+				}
+				else {
+					Sound::play(*negative_sfx_sample, 1.5f);
+				}
+			}
+			// Drink
+			if (d.downs == 1) {
+				if (water.cur > 0) {
+					water.update_cur(-1);
+					thirst.update_cur(1);
 				}
 				else {
 					Sound::play(*negative_sfx_sample, 1.5f);
@@ -201,21 +217,35 @@ void PlayMode::update(float elapsed) {
 
 	// Set grid color
 	switch (grid_state) {
-		case negative:
-			grid_color = glm::u8vec4(0xff, 0x00, 0x00, 0xff);
-			break;
-		case positive:
-			grid_color = glm::u8vec4(0x00, 0xff, 0x00, 0xff);
-			break;
-		case prompt:
-			grid_color = glm::u8vec4(0xdd, 0xff, 0xdd, 0xff);
-			break;
-		default:
-			grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0xff);
+	case negative:
+		grid_color = glm::u8vec4(0xff, 0x00, 0x00, 0xff);
+		break;
+	case positive:
+		grid_color = glm::u8vec4(0x00, 0xff, 0x00, 0xff);
+		break;
+	case prompt:
+		grid_color = glm::u8vec4(0xdd, 0xff, 0xdd, 0xff);
+		break;
+	default:
+		grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0xff);
 	}
 
 	// Update scrolling text position
-	message_offset += 0.005f;
+	message_offset += message_speed * elapsed;
+
+	// Set proper heart
+	switch (get_overall_health()) {
+		case zero:
+		case poor:
+			set_heart(bad_heart);
+			break;
+		case okay:
+			set_heart(mid_heart);
+			break;
+		case good:
+			set_heart(good_heart);
+			break;
+	}
 
 	// Rotate Heart
 	cur_heart->rotation *= glm::angleAxis(glm::radians(elapsed * 18.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -225,29 +255,16 @@ void PlayMode::update(float elapsed) {
 	float scalar = (std::abs(sin) * 0.2f) + 0.8f;
 	cur_heart->scale = glm::vec3(scalar);
 
-	// Set proper heart
-	if (hunger < max_hunger / 3 || thirst < max_thirst / 3 || fatigue < max_fatigue / 3) {
-		if (cur_heart != bad_heart) {
-			swap_hearts(bad_heart, heart_base_pos);
-		}
-	}
-	else if (hunger < 2 * (max_hunger / 3) || thirst < 2 * (max_thirst / 3) || fatigue < 2 * (max_fatigue / 3)) {
-		if (cur_heart != mid_heart) {
-			swap_hearts(mid_heart, heart_base_pos);
-		}
-	}
-	else {
-		if (cur_heart != good_heart) {
-			swap_hearts(good_heart, heart_base_pos);
-		}
-	}
-
 	// Reset button press counters:
 	space.downs = 0;
 	g.downs = 0;
 	e.downs = 0;
 	d.downs = 0;
 	s.downs = 0;
+}
+
+void PlayMode::menu_update(float elapsed) {
+
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -344,11 +361,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		lines.draw_text("Hunger",
 			glm::vec3((-3.0f / 4.0f) * aspect - 0.07f, (H1 * aspect) + 0.25f, 0.0),
 			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
-			get_stat_text_color(hunger, max_hunger));
-		lines.draw_text(std::to_string(hunger) + "/" + std::to_string(max_hunger),
+			get_stat_text_color(hunger));
+		lines.draw_text(std::to_string(hunger.cur) + "/" + std::to_string(hunger.max),
 			glm::vec3((-3.0f / 4.0f) * aspect + 0.08f, (H2 * aspect) + 0.23f, 0.0),
 			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			get_stat_text_color(hunger, max_hunger));
+			get_stat_text_color(hunger));
 		lines.draw_text("[ E ] at",
 			glm::vec3((-3.0f / 4.0f) * aspect + 0.06f, (H2 * aspect) + 0.05f, 0.0),
 			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
@@ -358,7 +375,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			glm::vec3((-3.0f / 4.0f) * aspect - 0.02f, (H1 * -aspect) + 0.05f, 0.0),
 			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text(std::to_string(food),
+		lines.draw_text(std::to_string(food.cur),
 			glm::vec3((-3.0f / 4.0f) * aspect + 0.13f, (H2 * -aspect) - 0.32f, 0.0),
 			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
@@ -370,11 +387,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		lines.draw_text("Thirst",
 			glm::vec3(-0.22f, (H1 * aspect) + 0.25f, 0.0),
 			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
-			get_stat_text_color(thirst, max_thirst));
-		lines.draw_text(std::to_string(thirst) + "/" + std::to_string(max_thirst),
+			get_stat_text_color(thirst));
+		lines.draw_text(std::to_string(thirst.cur) + "/" + std::to_string(thirst.max),
 			glm::vec3(-0.09f, (H2 * aspect) + 0.23f, 0.0),
 			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			get_stat_text_color(thirst, max_thirst));
+			get_stat_text_color(thirst));
 		lines.draw_text("[ D ] rink",
 			glm::vec3(-0.13f, (H2 * aspect) + 0.05f, 0.0),
 			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
@@ -384,7 +401,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			glm::vec3(-0.16, (H1 * -aspect) + 0.05f, 0.0),
 			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text(std::to_string(water),
+		lines.draw_text(std::to_string(water.cur),
 			glm::vec3(0.0f, (H2 * -aspect) - 0.32f, 0.0),
 			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
@@ -396,11 +413,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		lines.draw_text("Fatigue",
 			glm::vec3((1.0f / 2.0f) * aspect + 0.07f, (H1 * aspect) + 0.25f, 0.0),
 			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
-			get_stat_text_color(fatigue, max_fatigue));
-		lines.draw_text(std::to_string(fatigue) + "/" + std::to_string(max_fatigue),
+			get_stat_text_color(fatigue));
+		lines.draw_text(std::to_string(fatigue.cur) + "/" + std::to_string(fatigue.max),
 			glm::vec3((1.0f / 2.0f) * aspect + 0.20f, (H2 * aspect) + 0.23f, 0.0),
 			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-			get_stat_text_color(fatigue, max_fatigue));
+			get_stat_text_color(fatigue));
 		lines.draw_text("[ S ] leep",
 			glm::vec3((1.0f / 2.0f) * aspect + 0.16f, (H2 * aspect) + 0.05f, 0.0),
 			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
@@ -409,25 +426,70 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	GL_ERRORS();
 }
 
-glm::u8vec4 PlayMode::get_stat_text_color(uint16_t cur, uint16_t max) {
-	if (cur <= (max / 3)) {
-		return glm::u8vec4(0xff, 0x99, 0x99, 0xff);
-	} 
-	else if (cur <= 2 * (max / 3)) {
-		return glm::u8vec4(0xff, 0xff, 0xff, 0xff);
-	}
-	else {
-		return glm::u8vec4(0x99, 0xff, 0x99, 0xff);
+glm::u8vec4 PlayMode::get_stat_text_color(PlayerStat stat) {
+	switch (stat.status) {
+		case zero:
+			return glm::u8vec4(0x00, 0x00, 0x00, 0xff);
+			break;
+		case poor:
+			return glm::u8vec4(0xff, 0x99, 0x99, 0xff);
+			break;
+		case good:
+			return glm::u8vec4(0x99, 0xff, 0x99, 0xff);
+			break;
+		default:
+		case okay:
+			return glm::u8vec4(0xff, 0xff, 0xff, 0xff);
+			break;
 	}
 }
 
-void PlayMode::swap_hearts(Scene::Transform* new_heart, glm::vec3 pos) {
-	new_heart->position = pos;
-	new_heart->rotation = cur_heart->rotation;
-	new_heart->scale = cur_heart->scale;
+PlayMode::StatStatus PlayMode::get_overall_health() {
+	return (StatStatus)std::min({ (int)hunger.status, (int)thirst.status, (int)fatigue.status });
+}
 
-	cur_heart->position = glm::vec3(10, 10, 10);
-	cur_heart->scale = glm::vec3(1, 1, 1);
+void PlayMode::set_heart(Scene::Transform* new_heart) {
+	if (cur_heart != new_heart) {
+		new_heart->position = heart_base_pos;
+		new_heart->rotation = cur_heart->rotation;
+		new_heart->scale = cur_heart->scale;
 
-	cur_heart = new_heart;
+		cur_heart->position = glm::vec3(10, 10, 10);
+		cur_heart->scale = glm::vec3(1, 1, 1);
+
+		cur_heart = new_heart;
+	}
+}
+
+void PlayMode::initialize_player_stats(bool is_hard_mode) {
+	if (is_hard_mode) {
+		hunger.max = 10;
+		hunger.cur = 8;
+		thirst.max = 10;
+		thirst.cur = 8;
+		food.max = 10;
+		food.cur = 0;
+		water.max = 10;
+		water.cur = 0;
+		fatigue.max = 10;
+		fatigue.cur = 10;
+		hunger.update_status();
+		thirst.update_status();
+		fatigue.update_status();
+	}
+	else {
+		hunger.max = 15;
+		hunger.cur = 15;
+		thirst.max = 15;
+		thirst.cur = 15;
+		food.max = 100;
+		food.cur = 2;
+		water.max = 100;
+		water.cur = 2;
+		fatigue.max = 10;
+		fatigue.cur = 10;
+		hunger.update_status();
+		thirst.update_status();
+		fatigue.update_status();
+	}
 }
