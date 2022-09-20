@@ -42,7 +42,6 @@ Load< Sound::Sample > normal_music_sample(LoadTagDefault, []() -> Sound::Sample 
 PlayMode::PlayMode() : scene(*main_scene) {
 	// Get pointers to hearts
 	for (auto &transform : scene.transforms) {
-		std::cout << transform.name << std::endl;
 		if (transform.name == "good_heart") good_heart = &transform;
 		else if (transform.name == "mid_heart") mid_heart = &transform;
 		else if (transform.name == "bad_heart") bad_heart = &transform;
@@ -186,48 +185,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	{
 		glDisable(GL_DEPTH_TEST);
 		float aspect = float(drawable_size.x) / float(drawable_size.y);
-
-		//Scrolling Text
-		DrawLines lines(glm::mat4(
-			1.0f / aspect, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		));
-
-		constexpr float H = 0.08f; // Specifies text height??
-		lines.draw_text(messages[cur_message_ind],
-			glm::vec3(aspect - message_offset * H, -1.0 + 0.45f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text(messages[cur_message_ind],
-			glm::vec3(aspect - message_offset * H + ofs, -1.0 + 0.45f * H + ofs, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00),
-			message_anchor_out);
-
-		// Check to see if the rightmost edge of the text has scrolled off the left side of the screen
-		if (message_anchor_out->x < -aspect) {
-			// Set next message, loop back to beginning if neccesary
-			cur_message_ind = (cur_message_ind + 1) % messages.size();
-			// Set text so that lest edge of new leftmost character is just off the right side of the screen
-			message_offset = 0;
-		}
-
-		// Stats text
-		lines.draw_text("Hits : " + std::to_string(hits),
-			glm::vec3(0.35f * aspect, (-H * aspect) + 0.1f, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text("Missed beats : " + std::to_string(missed_beats),
-			glm::vec3(0.35f * aspect, (-2 * H * aspect) + 0.1f, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-		lines.draw_text("Misses : " + std::to_string(misses),
-			glm::vec3(0.35f * aspect, (-3 * H * aspect) + 0.1f, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 		
 		// Draw grid
 		DrawLines grid(glm::mat4(
@@ -246,6 +203,71 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		grid.draw(glm::vec3(-2, -0.997f, 0), glm::vec3(2, -0.997f, 0), grid_color);
 		grid.draw(glm::vec3(-0.998f, 2, 0), glm::vec3(-0.998f, -2, 0), grid_color);
 		grid.draw(glm::vec3(0.998f, 2, 0), glm::vec3(0.998f, -2, 0), grid_color);
+
+
+		// Draw Text
+		DrawLines lines(glm::mat4(
+			1.0f / aspect, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		));
+
+		// Specifies text heights
+		constexpr float H1 = 0.2f;
+		constexpr float H2 = 0.08f; 
+
+		// Scrolling Text
+		lines.draw_text(messages[cur_message_ind],
+			glm::vec3(aspect - message_offset * H2, -1.0 + 0.45f * H2, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		float ofs = 2.0f / drawable_size.y;
+		lines.draw_text(messages[cur_message_ind],
+			glm::vec3(aspect - message_offset * H2 + ofs, -1.0 + 0.45f * H2 + ofs, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0x00),
+			message_anchor_out);
+
+		// Check to see if the rightmost edge of the text has scrolled off the left side of the screen
+		if (message_anchor_out->x < -aspect) {
+			// Set next message, loop back to beginning if neccesary
+			cur_message_ind = (cur_message_ind + 1) % messages.size();
+			// Set text so that lest edge of new leftmost character is just off the right side of the screen
+			message_offset = 0;
+		}
+
+		// Timing stats text
+		lines.draw_text("Hits : " + std::to_string(hits),
+			glm::vec3(0.35f * aspect, (-H2 * aspect) + 0.1f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		lines.draw_text("Missed beats : " + std::to_string(missed_beats),
+			glm::vec3(0.35f * aspect, (-2 * H2 * aspect) + 0.1f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		lines.draw_text("Misses : " + std::to_string(misses),
+			glm::vec3(0.35f * aspect, (-3 * H2 * aspect) + 0.1f, 0.0),
+			glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
+		// Player stats text
+		lines.draw_text("Hunger",
+			glm::vec3((-3.0f / 4.0f) * aspect - 0.05f, (H1 * aspect) + 0.3f, 0.0),
+			glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+			get_stat_text_color(hunger, max_hunger));
 	}
 	GL_ERRORS();
+}
+
+glm::u8vec4 PlayMode::get_stat_text_color(uint16_t cur, uint16_t max) {
+	if (cur <= (max / 3)) {
+		return glm::u8vec4(0xff, 0x99, 0x99, 0xff);
+	} 
+	else if (cur <= 2 * (max / 3)) {
+		return glm::u8vec4(0xff, 0xff, 0xff, 0xff);
+	}
+	else {
+		return glm::u8vec4(0x99, 0xff, 0x99, 0xff);
+	}
 }

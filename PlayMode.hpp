@@ -43,6 +43,12 @@ struct PlayMode : Mode {
 	float timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
 
 	// Player stats
+	uint8_t max_hunger = 10;
+	uint8_t hunger = max_hunger; // 10/10: full, not hungry  0/10: starved to death
+	uint16_t food = 0; // amount of gathered food
+	uint8_t max_thirst = 10;
+	uint8_t thirst = max_thirst; // 10/10: full, not thirsty  0/10: dehydrated to death
+	uint16_t water = 0; // amount of stored water
 
 	// Timing stats
 	uint16_t missed_beats = 0;
@@ -63,7 +69,10 @@ struct PlayMode : Mode {
 
 	// Scrolling text
 	float message_offset = 0.1f;
-	glm::vec3 * message_anchor_out = new glm::vec3();
+	glm::vec3* message_anchor_out = new glm::vec3();
 	uint8_t cur_message_ind = 0;
-	std::vector<std::string> messages = {"First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message"};
+	std::vector<std::string> messages = { "First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message" };
+
+	// Helper Function
+	glm::u8vec4 get_stat_text_color(uint16_t cur, uint16_t max);
 };
