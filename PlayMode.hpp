@@ -23,7 +23,7 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} space;
+	} space, g, e, d, s;
 
 	// Local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
@@ -43,14 +43,14 @@ struct PlayMode : Mode {
 	float timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
 
 	// Player stats
-	uint8_t max_hunger = 10;
-	uint8_t hunger = max_hunger; // 10/10: full, not hungry  0/10: starved to death
-	uint16_t food = 0; // amount of gathered food
-	uint8_t max_thirst = 10;
-	uint8_t thirst = max_thirst; // 10/10: full, not thirsty  0/10: dehydrated to death
-	uint16_t water = 0; // amount of stored water
-	uint8_t max_fatigue = 10;
-	uint8_t fatigue = max_fatigue; // 10/10: well rested, not tired  0/10: exhausted
+	int8_t max_hunger = 10;
+	int8_t hunger = max_hunger; // 10/10: full, not hungry  0/10: starved to death
+	int16_t food = 0; // amount of gathered food
+	int8_t max_thirst = 10;
+	int8_t thirst = max_thirst; // 10/10: full, not thirsty  0/10: dehydrated to death
+	int16_t water = 0; // amount of stored water
+	int8_t max_fatigue = 10;
+	int8_t fatigue = max_fatigue; // 10/10: well rested, not tired  0/10: exhausted
 
 	// Timing stats
 	uint16_t missed_beats = 0;
@@ -75,6 +75,6 @@ struct PlayMode : Mode {
 	uint8_t cur_message_ind = 0;
 	std::vector<std::string> messages = { "First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message" };
 
-	// Helper Function
+	// Helper Functions
 	glm::u8vec4 get_stat_text_color(uint16_t cur, uint16_t max);
 };

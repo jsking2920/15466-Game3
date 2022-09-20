@@ -39,6 +39,10 @@ Load< Sound::Sample > normal_music_sample(LoadTagDefault, []() -> Sound::Sample 
 	return new Sound::Sample(data_path("TaikoLoop.opus"));
 });
 
+Load< Sound::Sample > negative_sfx_sample(LoadTagDefault, []() -> Sound::Sample const* {
+	return new Sound::Sample(data_path("NegativeSFX.opus"));
+});
+
 PlayMode::PlayMode() : scene(*main_scene) {
 	// Get pointers to hearts
 	for (auto &transform : scene.transforms) {
@@ -76,10 +80,46 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			space.pressed = true;
 			return true;
 		}
+		else if (evt.key.keysym.sym == SDLK_g) {
+			g.downs += 1;
+			g.pressed = true;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_e) {
+			e.downs += 1;
+			e.pressed = true;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_d) {
+			d.downs += 1;
+			d.pressed = true;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_s) {
+			s.downs += 1;
+			s.pressed = true;
+			return true;
+		}
 	} 
 	else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_SPACE) {
 			space.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_g) {
+			g.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_e) {
+			e.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_d) {
+			d.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_s) {
+			s.pressed = false;
 			return true;
 		}
 	} 
@@ -109,20 +149,48 @@ void PlayMode::update(float elapsed) {
 	if (timer < -timing_tolerance) {
 		timer = bpm + timer;
 		missed_beats++;
+
+		hunger = std::clamp(--hunger, int8_t(0), max_hunger);
+		thirst = std::clamp(--thirst, int8_t(0), max_thirst);
+		fatigue = std::clamp(--fatigue, int8_t(0), max_fatigue);
+
 		// Flash grid red
 		grid_timer = grid_flash_duration;
 		grid_state = negative;
 	}
 
 	// Check for on-beat input
-	if (space.downs == 1) {
+	if (g.downs == 1 || e.downs == 1) {
+		// input on time
 		if (timer >= -timing_tolerance && timer <= timing_tolerance + elapsed) {
 			timer = bpm + timer; // reset timer and account for error within tolerance window
 			hits++;
 			// Flash grid green
 			grid_timer = grid_flash_duration;
 			grid_state = positive;
+
+			// Handle key specific logic
+			// Gather
+			if (g.downs == 1) {
+				if (std::rand() % 2 == 0) {
+					food++;
+				}
+				else {
+					water++;
+				}
+			}
+			// Eat
+			if (e.downs == 1) {
+				if (food > 0) {
+					food--;
+					hunger = std::clamp(++hunger, int8_t(0), max_hunger);
+				}
+				else {
+					Sound::play(*negative_sfx_sample);
+				}
+			}
 		}
+		// input off-beat
 		else {
 			misses++;
 			// Flash grid red
@@ -159,6 +227,10 @@ void PlayMode::update(float elapsed) {
 
 	// Reset button press counters:
 	space.downs = 0;
+	g.downs = 0;
+	e.downs = 0;
+	d.downs = 0;
+	s.downs = 0;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
