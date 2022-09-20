@@ -186,7 +186,7 @@ void PlayMode::update(float elapsed) {
 					hunger = std::clamp(++hunger, int8_t(0), max_hunger);
 				}
 				else {
-					Sound::play(*negative_sfx_sample);
+					Sound::play(*negative_sfx_sample, 1.5f);
 				}
 			}
 		}
