@@ -33,7 +33,7 @@ struct PlayMode : Mode {
 	Scene::Transform *good_heart = nullptr;
 	Scene::Transform* mid_heart = nullptr;
 	Scene::Transform* bad_heart = nullptr;
-	glm::vec3 hearth_base_pos;
+	glm::vec3 heart_base_pos;
 	glm::quat heart_base_rotation;
 
 	// Music + Beat Detection
@@ -77,4 +77,5 @@ struct PlayMode : Mode {
 
 	// Helper Functions
 	glm::u8vec4 get_stat_text_color(uint16_t cur, uint16_t max);
+	void swap_hearts(Scene::Transform* new_heart, glm::vec3 pos);
 };

@@ -56,7 +56,7 @@ PlayMode::PlayMode() : scene(*main_scene) {
 
 	// Set good heart as current heart
 	cur_heart = good_heart;
-	hearth_base_pos = good_heart->position;
+	heart_base_pos = good_heart->position;
 	heart_base_rotation = good_heart->rotation;
 	mid_heart->position += glm::vec3(10, 10, 10); // Hide off screen
 	bad_heart->position += glm::vec3(10, 10, 10);
@@ -224,6 +224,23 @@ void PlayMode::update(float elapsed) {
 	float sin = std::sin(lerp_t * float(M_PI));
 	float scalar = (std::abs(sin) * 0.2f) + 0.8f;
 	cur_heart->scale = glm::vec3(scalar);
+
+	// Set proper heart
+	if (hunger < max_hunger / 3 || thirst < max_thirst / 3 || fatigue < max_fatigue / 3) {
+		if (cur_heart != bad_heart) {
+			swap_hearts(bad_heart, heart_base_pos);
+		}
+	}
+	else if (hunger < 2 * (max_hunger / 3) || thirst < 2 * (max_thirst / 3) || fatigue < 2 * (max_fatigue / 3)) {
+		if (cur_heart != mid_heart) {
+			swap_hearts(mid_heart, heart_base_pos);
+		}
+	}
+	else {
+		if (cur_heart != good_heart) {
+			swap_hearts(good_heart, heart_base_pos);
+		}
+	}
 
 	// Reset button press counters:
 	space.downs = 0;
@@ -402,4 +419,15 @@ glm::u8vec4 PlayMode::get_stat_text_color(uint16_t cur, uint16_t max) {
 	else {
 		return glm::u8vec4(0x99, 0xff, 0x99, 0xff);
 	}
+}
+
+void PlayMode::swap_hearts(Scene::Transform* new_heart, glm::vec3 pos) {
+	new_heart->position = pos;
+	new_heart->rotation = cur_heart->rotation;
+	new_heart->scale = cur_heart->scale;
+
+	cur_heart->position = glm::vec3(10, 10, 10);
+	cur_heart->scale = glm::vec3(1, 1, 1);
+
+	cur_heart = new_heart;
 }
