@@ -16,13 +16,13 @@
 
 GLuint heart_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > heart_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("DanceOrDie.pnct"));
+	MeshBuffer const *ret = new MeshBuffer(data_path("HeartbeatSurvival.pnct"));
 	heart_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
 Load< Scene > main_scene(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("DanceOrDie.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+	return new Scene(data_path("HeartbeatSurvival.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		Mesh const &mesh = heart_meshes->lookup(mesh_name);
 
 		scene.drawables.emplace_back(transform);
@@ -37,10 +37,12 @@ Load< Scene > main_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-Load< Sound::Sample > normal_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
+Load< Sound::Sample > easy_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("TaikoLoop.opus"));
 });
-
+Load< Sound::Sample > hard_music_sample(LoadTagDefault, []() -> Sound::Sample const* {
+	return new Sound::Sample(data_path("Taiko2Loop.opus"));
+});
 Load< Sound::Sample > negative_sfx_sample(LoadTagDefault, []() -> Sound::Sample const* {
 	return new Sound::Sample(data_path("NegativeSFX.opus"));
 });
@@ -58,21 +60,18 @@ PlayMode::PlayMode() : scene(*main_scene) {
 	if (mid_heart == nullptr) throw std::runtime_error("mid_heart not found.");
 	if (bad_heart == nullptr) throw std::runtime_error("bad_heart not found.");
 
-	// Set good heart as current heart
+	// Initialize heart variables and positions
 	cur_heart = good_heart;
 	heart_base_pos = good_heart->position;
 	heart_base_rotation = good_heart->rotation;
-	mid_heart->position += glm::vec3(10, 10, 10); // Hide off screen
-	bad_heart->position += glm::vec3(10, 10, 10);
+
+	mid_heart->position = heart_hidden_pos;
+	bad_heart->position = heart_hidden_pos;
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
-
-	// Start music loop playing:
-	music_loop = Sound::loop(*normal_music_sample);
-
-	initialize_player_stats(false);
+	
 	game_state = menu;
 }
 
@@ -107,6 +106,16 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			s.pressed = true;
 			return true;
 		}
+		else if (evt.key.keysym.sym == SDLK_1) {
+			one.downs += 1;
+			one.pressed = true;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_2) {
+			two.downs += 1;
+			two.pressed = true;
+			return true;
+		}
 	} 
 	else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_SPACE) {
@@ -129,6 +138,14 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			s.pressed = false;
 			return true;
 		}
+		else if (evt.key.keysym.sym == SDLK_1) {
+			one.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_2) {
+			two.pressed = false;
+			return true;
+		}
 	} 
 
 	return false;
@@ -137,6 +154,7 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 // ------------ Update Functions -----------------
 
 void PlayMode::update(float elapsed) {
+
 	switch (game_state) {
 		case game:
 			game_update(elapsed);
@@ -149,6 +167,15 @@ void PlayMode::update(float elapsed) {
 			menu_update(elapsed);
 			break;
 	}
+
+	// Reset button press counters:
+	space.downs = 0;
+	g.downs = 0;
+	e.downs = 0;
+	d.downs = 0;
+	s.downs = 0;
+	one.downs = 0;
+	two.downs = 0;
 }
 
 void PlayMode::game_update(float elapsed) {
@@ -235,17 +262,17 @@ void PlayMode::game_update(float elapsed) {
 
 	// Set grid color
 	switch (grid_state) {
-	case negative:
-		grid_color = glm::u8vec4(0xff, 0x00, 0x00, 0xff);
-		break;
-	case positive:
-		grid_color = glm::u8vec4(0x00, 0xff, 0x00, 0xff);
-		break;
-	case prompt:
-		grid_color = glm::u8vec4(0xdd, 0xff, 0xdd, 0xff);
-		break;
-	default:
-		grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0xff);
+		case negative:
+			grid_color = glm::u8vec4(0xff, 0x00, 0x00, 0xff);
+			break;
+		case positive:
+			grid_color = glm::u8vec4(0x00, 0xff, 0x00, 0xff);
+			break;
+		case prompt:
+			grid_color = glm::u8vec4(0xdd, 0xff, 0xdd, 0xff);
+			break;
+		default:
+			grid_color = glm::u8vec4(0xff, 0xff, 0xff, 0xff);
 	}
 
 	// Update scrolling text position
@@ -272,17 +299,16 @@ void PlayMode::game_update(float elapsed) {
 	float sin = std::sin(lerp_t * float(M_PI));
 	float scalar = (std::abs(sin) * 0.2f) + 0.8f;
 	cur_heart->scale = glm::vec3(scalar);
-
-	// Reset button press counters:
-	space.downs = 0;
-	g.downs = 0;
-	e.downs = 0;
-	d.downs = 0;
-	s.downs = 0;
 }
 
 void PlayMode::menu_update(float elapsed) {
 
+	if (one.downs == 1) {
+		setup_new_round(false);
+	}
+	else if (two.downs == 1) {
+		setup_new_round(true);
+	}
 }
 
 void PlayMode::pause_update(float elapsed) {
@@ -525,17 +551,23 @@ PlayMode::StatStatus PlayMode::get_overall_health() {
 	return (StatStatus)std::min({ (int)hunger.status, (int)thirst.status, (int)fatigue.status });
 }
 
-void PlayMode::set_heart(Scene::Transform* new_heart) {
+void PlayMode::set_heart(Scene::Transform* new_heart, bool reset_cur) {
 
 	if (cur_heart != new_heart) {
 		new_heart->position = heart_base_pos;
 		new_heart->rotation = cur_heart->rotation;
 		new_heart->scale = cur_heart->scale;
 
-		cur_heart->position = glm::vec3(10, 10, 10);
+		cur_heart->position = heart_hidden_pos;
 		cur_heart->scale = glm::vec3(1, 1, 1);
 
 		cur_heart = new_heart;
+	}
+	// Reset postion/scale of current heart
+	else if (reset_cur) {
+		cur_heart->position = heart_base_pos;
+		cur_heart->scale = glm::vec3(1, 1, 1);
+		cur_heart->rotation = heart_base_rotation;
 	}
 }
 
@@ -571,4 +603,39 @@ void PlayMode::initialize_player_stats(bool is_hard_mode) {
 		thirst.update_status();
 		fatigue.update_status();
 	}
+
+	hits = 0;
+	missed_beats = 0;
+	misses = 0;
+}
+
+void PlayMode::setup_new_round(bool is_hard_mode) {
+
+	// Reset heart
+	set_heart(good_heart, true);
+
+	// Reset message variables
+	message_offset = 0.1f;
+	cur_message_ind = 0;
+	
+	// Set up music and timing variables
+	if (is_hard_mode) {
+		bpm = 60.0f / 90.0f; // 60 / bpm of Taiko2
+		timer = bpm;
+		timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
+		music_loop = Sound::loop(*hard_music_sample);
+	}
+	else {
+		bpm = 60.0f / 75.0f; // (60 / BPM) BPM of taiko is actually 150 but its got a half time feel
+		timer = bpm;
+		timing_tolerance = bpm / 8.0f;
+		music_loop = Sound::loop(*easy_music_sample);
+	}
+
+	// Reset grid variables
+	grid_flash_duration = bpm / 4.0f; // how long grid color flashes last
+	grid_timer = grid_flash_duration;
+	
+	initialize_player_stats(is_hard_mode);
+	game_state = game;
 }

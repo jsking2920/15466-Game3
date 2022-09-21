@@ -37,7 +37,7 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} space, g, e, d, s;
+	} space, g, e, d, s, one, two;
 
 	// Local copy of the game scene (so code can change it during gameplay)
 	Scene scene;
@@ -49,12 +49,13 @@ struct PlayMode : Mode {
 	Scene::Transform* bad_heart = nullptr;
 	glm::vec3 heart_base_pos;
 	glm::quat heart_base_rotation;
+	glm::vec3 heart_hidden_pos = glm::vec3(10, 10, 10);
 
-	// Music + Beat Detection
-	float bpm = 60.0f / 75.0f; // (60 / BPM) BPM of taiko is actually 150 but its got a half time feel
+	// Music + Beat Detection (All set in start_new_round based on difficulty)
+	float bpm; 
 	float timer = bpm; // Timer counts down from bpm, player tries to input on or near "0"
 	std::shared_ptr< Sound::PlayingSample > music_loop;
-	float timing_tolerance = bpm / 8.0f; // Can miss by up to an eighth of a beat and still count as a hit
+	float timing_tolerance;
 
 	// Player stats
 	enum StatStatus {
@@ -87,9 +88,9 @@ struct PlayMode : Mode {
 	} hunger, thirst, food, water, fatigue;
 
 	// Timing stats
-	uint16_t missed_beats = 0;
-	uint16_t hits = 0;
-	uint16_t misses = 0; // Off time clicks
+	uint16_t missed_beats;
+	uint16_t hits;
+	uint16_t misses; // Off time clicks
 	
 	// Camera
 	Scene::Camera *camera = nullptr;
@@ -100,21 +101,24 @@ struct PlayMode : Mode {
 	};
 	GridState grid_state = neutral;
 	glm::u8vec4 grid_color = glm::u8vec4(0xff);
-	float grid_flash_duration = bpm / 4.0f; // how long grid color flashes last
-	float grid_timer = grid_flash_duration;
+	float grid_flash_duration; // how long grid color flashes last
+	float grid_timer;
 
 	// Scrolling text
-	float message_offset = 0.1f;
+	float message_offset;
 	float message_speed = 1.0f;
 	glm::vec3* message_anchor_out = new glm::vec3();
-	uint8_t cur_message_ind = 0;
+	uint8_t cur_message_ind;
 	std::vector<std::string> messages = { "First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message" };
 
 	// Helper Functions
-	glm::u8vec4 get_stat_text_color(PlayerStat stat);
-	void set_heart(Scene::Transform* new_heart);
-	void initialize_player_stats(bool is_hard_mode);
 	StatStatus get_overall_health();
+	glm::u8vec4 get_stat_text_color(PlayerStat stat);
+	void set_heart(Scene::Transform* new_heart, bool reset_cur = false);
+
+	void initialize_player_stats(bool is_hard_mode);
+	void setup_new_round(bool is_hard_mode);
+	
 
 	static int8_t clmp(int8_t v, int8_t lo, int8_t hi) {
 		if (v < lo) {
