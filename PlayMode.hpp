@@ -51,9 +51,9 @@ struct PlayMode : Mode {
 	glm::quat heart_base_rotation;
 	glm::vec3 heart_hidden_pos = glm::vec3(10, 10, 10);
 
-	// Music + Beat Detection (All set in start_new_round based on difficulty)
+	// Music + Beat Detection (all initialized in start_new_round based on difficulty)
 	float bpm; 
-	float timer = bpm; // Timer counts down from bpm, player tries to input on or near "0"
+	float timer; // Timer counts down from bpm, player tries to input on or near "0"
 	std::shared_ptr< Sound::PlayingSample > music_loop;
 	float timing_tolerance;
 
@@ -106,7 +106,7 @@ struct PlayMode : Mode {
 
 	// Scrolling text
 	float message_offset;
-	float message_speed = 1.0f;
+	float message_speed;
 	glm::vec3* message_anchor_out = new glm::vec3();
 	uint8_t cur_message_ind;
 	std::vector<std::string> messages = { "First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message" };

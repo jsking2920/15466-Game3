@@ -611,13 +611,6 @@ void PlayMode::initialize_player_stats(bool is_hard_mode) {
 
 void PlayMode::setup_new_round(bool is_hard_mode) {
 
-	// Reset heart
-	set_heart(good_heart, true);
-
-	// Reset message variables
-	message_offset = 0.1f;
-	cur_message_ind = 0;
-	
 	// Set up music and timing variables
 	if (is_hard_mode) {
 		bpm = 60.0f / 90.0f; // 60 / bpm of Taiko2
@@ -635,6 +628,14 @@ void PlayMode::setup_new_round(bool is_hard_mode) {
 	// Reset grid variables
 	grid_flash_duration = bpm / 4.0f; // how long grid color flashes last
 	grid_timer = grid_flash_duration;
+
+	// Reset message variables
+	message_offset = 0.1f;
+	cur_message_ind = 0;
+	message_speed = bpm * 2.0f;
+
+	// Reset heart
+	set_heart(good_heart, true);
 	
 	initialize_player_stats(is_hard_mode);
 	game_state = game;
