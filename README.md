@@ -10,7 +10,7 @@ Screen Shot:
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+
 
 This game was built with [NEST](NEST.md).
 

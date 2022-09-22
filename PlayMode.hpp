@@ -87,10 +87,15 @@ struct PlayMode : Mode {
 		}
 	} hunger, thirst, food, water, fatigue;
 
+	bool sleeping;
+
 	// Timing stats
 	uint16_t missed_beats;
 	uint16_t hits;
 	uint16_t misses; // Off time clicks
+
+	// Other stats
+	uint16_t deaths = 0;
 	
 	// Camera
 	Scene::Camera *camera = nullptr;
@@ -109,7 +114,8 @@ struct PlayMode : Mode {
 	float message_speed;
 	glm::vec3* message_anchor_out = new glm::vec3();
 	uint8_t cur_message_ind;
-	std::vector<std::string> messages = { "First Message, this is the first message", "Yep, this is the second message", "Woo hoo third message" };
+	std::vector<std::string> messages = { "A lonely island with nothing to do...", "I'm really starting to get hungry", "I swear there's sand in my ears", 
+										  "Will it be foraging today? Or perhaps foraging...", "*glug* *glug *glug*", "..."};
 
 	// Helper Functions
 	StatStatus get_overall_health();

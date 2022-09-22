@@ -216,27 +216,45 @@ void PlayMode::game_update(float elapsed) {
 
 	// Player missed the last beat so reset the timer
 	if (timer < -timing_tolerance) {
+
 		timer = bpm + timer;
-		missed_beats++;
+
+		if (!sleeping) {
+			missed_beats++;
+			fatigue.update_cur(-1);
+
+			// Flash grid red
+			grid_timer = grid_flash_duration;
+			grid_state = negative;
+		}
+		else {
+			hits++;
+			fatigue.update_cur(1);
+		}
 
 		hunger.update_cur(-1);
 		thirst.update_cur(-1);
-		fatigue.update_cur(-1);
-
-		// Flash grid red
-		grid_timer = grid_flash_duration;
-		grid_state = negative;
 	}
 
 	// Check for on-beat input
-	if (g.downs == 1 || e.downs == 1 || d.downs == 1) {
+	if (g.downs == 1 || e.downs == 1 || d.downs == 1 || s.downs == 1) {
 		// input on time
 		if (timer >= -timing_tolerance && timer <= timing_tolerance + elapsed) {
+			
+			// Any key press wakes player up
+			if (sleeping) {
+				sleeping = false;
+				music_loop->set_volume(1.0f);
+			}
+
 			timer = bpm + timer; // reset timer and account for error within tolerance window
 			hits++;
 			// Flash grid green
 			grid_timer = grid_flash_duration;
 			grid_state = positive;
+
+			// fatigue decreases unless player sleeps
+			fatigue.update_cur(-1);
 
 			// Handle key specific logic
 			// Gather
@@ -267,6 +285,11 @@ void PlayMode::game_update(float elapsed) {
 				else {
 					Sound::play(*negative_sfx_sample, 1.5f);
 				}
+			}
+			// Sleep
+			if (s.downs == 1) {
+				sleeping = true;
+				music_loop->set_volume(0.3f);
 			}
 		}
 		// input off-beat
@@ -435,22 +458,32 @@ void PlayMode::game_draw_ui(glm::uvec2 const& drawable_size) {
 		message_offset = 0;
 	}
 
-	// Timing stats text
-	lines.draw_text("Hits : " + std::to_string(hits),
+	
+	lines.draw_text("Days Survied : " + std::to_string((missed_beats + hits) / 4), // total # of measures played
 		glm::vec3(0.35f * aspect, (-H2 * aspect) + 0.1f, 0.0),
 		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
 		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-	lines.draw_text("Missed beats : " + std::to_string(missed_beats),
+	lines.draw_text("Deaths: " + std::to_string(deaths),
 		glm::vec3(0.35f * aspect, (-2 * H2 * aspect) + 0.1f, 0.0),
 		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
 		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
-	lines.draw_text("Misses : " + std::to_string(misses),
+
+	// Timing stats text
+	lines.draw_text("Hits : " + std::to_string(hits),
 		glm::vec3(0.35f * aspect, (-3 * H2 * aspect) + 0.1f, 0.0),
 		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+		glm::u8vec4(0xdd, 0xdd, 0xdd, 0xff));
+	lines.draw_text("Missed beats : " + std::to_string(missed_beats),
+		glm::vec3(0.35f * aspect, (-4 * H2 * aspect) + 0.1f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xdd, 0xdd, 0xdd, 0xff));
+	lines.draw_text("Misses : " + std::to_string(misses),
+		glm::vec3(0.35f * aspect, (-5 * H2 * aspect) + 0.1f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xdd, 0xdd, 0xdd, 0xff));
 
 	lines.draw_text("[ Esc ] ape to menu",
-		glm::vec3(0.35f * aspect, (-6 * H2 * aspect) + 0.1f, 0.0),
+		glm::vec3(0.35f * aspect, (-6.2f * H2 * aspect) + 0.1f, 0.0),
 		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
 		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
@@ -640,8 +673,8 @@ void PlayMode::initialize_player_stats(bool is_hard_mode) {
 		food.cur = 0;
 		water.max = 10;
 		water.cur = 0;
-		fatigue.max = 10;
-		fatigue.cur = 10;
+		fatigue.max = 15;
+		fatigue.cur = 15;
 		hunger.update_status();
 		thirst.update_status();
 		fatigue.update_status();
@@ -655,8 +688,8 @@ void PlayMode::initialize_player_stats(bool is_hard_mode) {
 		food.cur = 2;
 		water.max = 100;
 		water.cur = 2;
-		fatigue.max = 10;
-		fatigue.cur = 10;
+		fatigue.max = 15;
+		fatigue.cur = 15;
 		hunger.update_status();
 		thirst.update_status();
 		fatigue.update_status();
@@ -698,6 +731,7 @@ void PlayMode::setup_new_round(bool is_hard_mode) {
 
 	reset_heart();
 	
+	sleeping = false;
 	initialize_player_stats(is_hard_mode);
 	game_state = game;
 }
@@ -714,6 +748,8 @@ void PlayMode::setup_menu() {
 }
 
 void PlayMode::to_death_screen() {
+
+	deaths++;
 
 	cur_heart->rotation = heart_base_rotation;
 	cur_heart->scale = glm::vec3(1, 1, 1);
