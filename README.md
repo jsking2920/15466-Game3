@@ -18,5 +18,5 @@ Design: Heartbeat Survival is a combination of rhythm, idle, and survival games 
   s: go to sleep (do any other action to wake back up)<br>
   esc: return to menu<br><br>
 
-This game was built with [NEST](NEST.md).
+This game was built with [NEST](NEST.md) and base code from https://github.com/15-466/15-466-f22-base3
 
