@@ -43,6 +43,9 @@ Load< Sound::Sample > easy_music_sample(LoadTagDefault, []() -> Sound::Sample co
 Load< Sound::Sample > hard_music_sample(LoadTagDefault, []() -> Sound::Sample const* {
 	return new Sound::Sample(data_path("Taiko2Loop.opus"));
 });
+Load< Sound::Sample > menu_music_sample(LoadTagDefault, []() -> Sound::Sample const* {
+	return new Sound::Sample(data_path("TaikoBeach.opus"));
+});
 Load< Sound::Sample > negative_sfx_sample(LoadTagDefault, []() -> Sound::Sample const* {
 	return new Sound::Sample(data_path("NegativeSFX.opus"));
 });
@@ -61,18 +64,14 @@ PlayMode::PlayMode() : scene(*main_scene) {
 	if (bad_heart == nullptr) throw std::runtime_error("bad_heart not found.");
 
 	// Initialize heart variables and positions
-	cur_heart = good_heart;
 	heart_base_pos = good_heart->position;
 	heart_base_rotation = good_heart->rotation;
-
-	mid_heart->position = heart_hidden_pos;
-	bad_heart->position = heart_hidden_pos;
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
 	
-	game_state = menu;
+	setup_menu();
 }
 
 PlayMode::~PlayMode() {
@@ -116,6 +115,11 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			two.pressed = true;
 			return true;
 		}
+		else if (evt.key.keysym.sym == SDLK_ESCAPE) {
+			esc.downs += 1;
+			esc.pressed = true;
+			return true;
+		}
 	} 
 	else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_SPACE) {
@@ -144,6 +148,10 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		}
 		else if (evt.key.keysym.sym == SDLK_2) {
 			two.pressed = false;
+			return true;
+		}
+		else if (evt.key.keysym.sym == SDLK_ESCAPE) {
+			esc.pressed = false;
 			return true;
 		}
 	} 
@@ -176,9 +184,16 @@ void PlayMode::update(float elapsed) {
 	s.downs = 0;
 	one.downs = 0;
 	two.downs = 0;
+	esc.downs = 0;
 }
 
 void PlayMode::game_update(float elapsed) {
+
+	// Check for quit key
+	if (esc.downs == 1) {
+		setup_menu();
+		return;
+	}
 
 	// Update beat detection timer
 	timer -= elapsed;
@@ -282,13 +297,13 @@ void PlayMode::game_update(float elapsed) {
 	switch (get_overall_health()) {
 		case zero:
 		case poor:
-			set_heart(bad_heart);
+			swap_heart(bad_heart);
 			break;
 		case okay:
-			set_heart(mid_heart);
+			swap_heart(mid_heart);
 			break;
 		case good:
-			set_heart(good_heart);
+			swap_heart(good_heart);
 			break;
 	}
 
@@ -425,6 +440,11 @@ void PlayMode::game_draw_ui(glm::uvec2 const& drawable_size) {
 		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
 		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
 
+	lines.draw_text("[ Esc ] ape to menu",
+		glm::vec3(0.35f * aspect, (-6 * H2 * aspect) + 0.1f, 0.0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff));
+
 	// Player stats text
 	lines.draw_text("Hunger",
 		glm::vec3((-3.0f / 4.0f) * aspect - 0.07f, (H1 * aspect) + 0.25f, 0.0),
@@ -551,7 +571,7 @@ PlayMode::StatStatus PlayMode::get_overall_health() {
 	return (StatStatus)std::min({ (int)hunger.status, (int)thirst.status, (int)fatigue.status });
 }
 
-void PlayMode::set_heart(Scene::Transform* new_heart, bool reset_cur) {
+void PlayMode::swap_heart(Scene::Transform* new_heart) {
 
 	if (cur_heart != new_heart) {
 		new_heart->position = heart_base_pos;
@@ -563,12 +583,18 @@ void PlayMode::set_heart(Scene::Transform* new_heart, bool reset_cur) {
 
 		cur_heart = new_heart;
 	}
-	// Reset postion/scale of current heart
-	else if (reset_cur) {
-		cur_heart->position = heart_base_pos;
-		cur_heart->scale = glm::vec3(1, 1, 1);
-		cur_heart->rotation = heart_base_rotation;
-	}
+}
+
+void PlayMode::reset_heart() {
+
+	mid_heart->position = heart_hidden_pos;
+	bad_heart->position = heart_hidden_pos;
+
+	good_heart->position = heart_base_pos;
+	good_heart->scale = glm::vec3(1, 1, 1);
+	good_heart->rotation = heart_base_rotation;
+	
+	cur_heart = good_heart;
 }
 
 void PlayMode::initialize_player_stats(bool is_hard_mode) {
@@ -610,6 +636,10 @@ void PlayMode::initialize_player_stats(bool is_hard_mode) {
 }
 
 void PlayMode::setup_new_round(bool is_hard_mode) {
+	
+	if (music_loop) {
+		music_loop->stop();
+	}
 
 	// Set up music and timing variables
 	if (is_hard_mode) {
@@ -634,9 +664,19 @@ void PlayMode::setup_new_round(bool is_hard_mode) {
 	cur_message_ind = 0;
 	message_speed = bpm * 2.0f;
 
-	// Reset heart
-	set_heart(good_heart, true);
+	reset_heart();
 	
 	initialize_player_stats(is_hard_mode);
 	game_state = game;
+}
+
+void PlayMode::setup_menu() {
+
+	reset_heart();
+
+	if (music_loop) {
+		music_loop->stop();
+	}
+	music_loop = Sound::loop(*menu_music_sample);
+	game_state = menu;
 }

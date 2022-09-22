@@ -31,13 +31,13 @@ struct PlayMode : Mode {
 	enum GameState {
 		menu, game, pause
 	};
-	GameState game_state = menu;
+	GameState game_state;
 
 	// Input tracking
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} space, g, e, d, s, one, two;
+	} space, g, e, d, s, one, two, esc;
 
 	// Local copy of the game scene (so code can change it during gameplay)
 	Scene scene;
@@ -114,10 +114,12 @@ struct PlayMode : Mode {
 	// Helper Functions
 	StatStatus get_overall_health();
 	glm::u8vec4 get_stat_text_color(PlayerStat stat);
-	void set_heart(Scene::Transform* new_heart, bool reset_cur = false);
+	void swap_heart(Scene::Transform* new_heart);
+	void reset_heart();
 
 	void initialize_player_stats(bool is_hard_mode);
 	void setup_new_round(bool is_hard_mode);
+	void setup_menu();
 	
 
 	static int8_t clmp(int8_t v, int8_t lo, int8_t hi) {
