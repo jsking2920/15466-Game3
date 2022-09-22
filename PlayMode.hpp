@@ -21,15 +21,15 @@ struct PlayMode : Mode {
 	// Update functions based on game state
 	void game_update(float elapsed);
 	void menu_update(float elapsed);
-	void pause_update(float elapsed);
+	void death_update(float elapsed);
 	// Draw functions based on game state
 	void game_draw_ui(glm::uvec2 const& drawable_size);
 	void menu_draw_ui(glm::uvec2 const& drawable_size);
-	void pause_draw_ui(glm::uvec2 const& drawable_size);
+	void death_draw_ui(glm::uvec2 const& drawable_size);
 
 	//----- game state -----
 	enum GameState {
-		menu, game, pause
+		menu, game, dead
 	};
 	GameState game_state;
 
@@ -120,6 +120,7 @@ struct PlayMode : Mode {
 	void initialize_player_stats(bool is_hard_mode);
 	void setup_new_round(bool is_hard_mode);
 	void setup_menu();
+	void to_death_screen();
 	
 
 	static int8_t clmp(int8_t v, int8_t lo, int8_t hi) {

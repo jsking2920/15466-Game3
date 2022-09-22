@@ -46,6 +46,9 @@ Load< Sound::Sample > hard_music_sample(LoadTagDefault, []() -> Sound::Sample co
 Load< Sound::Sample > menu_music_sample(LoadTagDefault, []() -> Sound::Sample const* {
 	return new Sound::Sample(data_path("TaikoBeach.opus"));
 });
+Load< Sound::Sample > death_music_sample(LoadTagDefault, []() -> Sound::Sample const* {
+	return new Sound::Sample(data_path("TaikoDeath.opus"));
+});
 Load< Sound::Sample > negative_sfx_sample(LoadTagDefault, []() -> Sound::Sample const* {
 	return new Sound::Sample(data_path("NegativeSFX.opus"));
 });
@@ -167,8 +170,8 @@ void PlayMode::update(float elapsed) {
 		case game:
 			game_update(elapsed);
 			break;
-		case pause:
-			pause_update(elapsed);
+		case dead:
+			death_update(elapsed);
 			break;
 		default:
 		case menu:
@@ -293,9 +296,11 @@ void PlayMode::game_update(float elapsed) {
 	// Update scrolling text position
 	message_offset += message_speed * elapsed;
 
-	// Set proper heart
+	// Check for death and set proper heart
 	switch (get_overall_health()) {
 		case zero:
+			to_death_screen();
+			return;
 		case poor:
 			swap_heart(bad_heart);
 			break;
@@ -326,8 +331,12 @@ void PlayMode::menu_update(float elapsed) {
 	}
 }
 
-void PlayMode::pause_update(float elapsed) {
+void PlayMode::death_update(float elapsed) {
 
+	if (esc.downs == 1) {
+		setup_menu();
+		return;
+	}
 }
 
 // -------------- Draw Functions ---------------
@@ -358,8 +367,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		case game:
 			game_draw_ui(drawable_size);
 			break;
-		case pause:
-			pause_draw_ui(drawable_size);
+		case dead:
+			death_draw_ui(drawable_size);
 			break;
 		default:
 		case menu:
@@ -538,11 +547,34 @@ void PlayMode::menu_draw_ui(glm::uvec2 const& drawable_size) {
 	lines.draw_text("[ 1 ] for easy  /  [ 2 ] for hard",
 		glm::vec3(-0.6f, 0, 0),
 		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
-		glm::u8vec4(0xcc, 0xcc, 0xcc, 0xcc));
+		glm::u8vec4(0xcc, 0xcc, 0xcc, 0xff));
 }
 
-void PlayMode::pause_draw_ui(glm::uvec2 const& drawable_size) {
+void PlayMode::death_draw_ui(glm::uvec2 const& drawable_size) {
 
+	glDisable(GL_DEPTH_TEST);
+	float aspect = float(drawable_size.x) / float(drawable_size.y);
+
+	DrawLines lines(glm::mat4(
+		1.0f / aspect, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	));
+
+	constexpr float H1 = 0.4f;
+	constexpr float H2 = 0.1f;
+
+	lines.draw_text("YOU DIED",
+		glm::vec3(-0.6f, 0, 0),
+		glm::vec3(H1, 0.0f, 0.0f), glm::vec3(0.0f, H1, 0.0f),
+		glm::u8vec4(0xFF, 0x00, 0x00, 0xff));
+
+	// Prompt
+	lines.draw_text("[ Esc ] ape",
+		glm::vec3(-0.2f, -0.2f, 0),
+		glm::vec3(H2, 0.0f, 0.0f), glm::vec3(0.0f, H2, 0.0f),
+		glm::u8vec4(0xcc, 0xcc, 0xcc, 0xff));
 }
 
 // --------------- Helper Functions -------------------------
@@ -679,4 +711,16 @@ void PlayMode::setup_menu() {
 	}
 	music_loop = Sound::loop(*menu_music_sample);
 	game_state = menu;
+}
+
+void PlayMode::to_death_screen() {
+
+	cur_heart->rotation = heart_base_rotation;
+	cur_heart->scale = glm::vec3(1, 1, 1);
+
+	if (music_loop) {
+		music_loop->stop();
+	}
+	music_loop = Sound::loop(*death_music_sample);
+	game_state = dead;
 }
